@@ -848,7 +848,7 @@ internal object ReferenceLyricSources {
         val letters = lyrics.filter { it.isLetter() }
         if (letters.isEmpty()) return null
         val cjk = letters.count { it.code in 0x4E00..0x9FFF || it.code in 0x3040..0x30FF || it.code in 0xAC00..0xD7AF }
-        return if (cjk.toFloat() / letters.size > 0.15f) "zh" else "en"
+        return if (cjk.toFloat() / letters.length > 0.15f) "zh" else "en"
     }
     private fun score(name: String, by: String, ms: Long, title: String, artist: String, durationMs: Long): Int {
         val n = norm(name); val t = norm(title); val a = norm(by); val ar = norm(artist)
