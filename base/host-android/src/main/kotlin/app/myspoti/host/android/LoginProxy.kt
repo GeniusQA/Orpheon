@@ -3,10 +3,10 @@ package app.myspoti.host.android
 import android.webkit.CookieManager
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
-import okhttp3.MediaType
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.util.concurrent.TimeUnit
@@ -36,7 +36,7 @@ internal class LoginProxy(
             .firstOrNull { it.key.equals("Content-Type", true) }?.value
         val bodyBytes = postData(request)
         val body = if (bodyBytes != null && method !in SIMPLE_METHODS) {
-            RequestBody.create(contentType?.let { MediaType.parse(it) }, bodyBytes)
+            bodyBytes.toRequestBody(contentType?.toMediaTypeOrNull())
         } else null
         builder.method(method, body)
 
