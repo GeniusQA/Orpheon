@@ -568,7 +568,7 @@ object LyricsApi {
         // Hand-timed syllable by syllable by its community (CC0), found by the song's Spotify id.
         val amll = async { if (sourceEnabled("amll")) within(WORD_WAIT_MS) { asking("amll", track) { fromAmll(track.trackId) } } else null }
         val netease = async { if (sourceEnabled("netease")) within(WORD_WAIT_MS) { asking("netease", track) { fromNetEaseWords(title, artist, durationMs) } } else null }
-        val qq = async { if (sourceEnabled("qqmusic")) within(WORD_WAIT_MS) { asking("qqmusic", track) { LyricsPlatformSources.fromQQMusic(title, artist, durationMs) } } else null }
+        val qq = async { if (sourceEnabled("qqmusic")) within(WORD_WAIT_MS) { askingSuspend("qqmusic", track) { LyricsPlatformSources.fromQQMusic(title, artist, durationMs) } } else null }
         val sp = spotify.await()
         // Shown at once while the word timings or the backing vocals are looked for (reported: lyrics slow to come).
         if (sp != null) showEarly(track, sp)
@@ -641,7 +641,7 @@ object LyricsApi {
             for (id in sourceOrder()) {
                 if (!sourceEnabled(id)) continue
                 asked[id] = async {
-                    asking(id, track) {
+                    askingSuspend(id, track) {
                         when (id) {
                             "lrclib" -> {
                                 val exact = async { lrclibGet(title, artist, track.album, durationSec) }
@@ -1239,6 +1239,15 @@ object LyricsApi {
             if (provider == null || it is com.music.spotui.data.DataSaver.Blocked) health.skipped() else health.failed(provider)
             null
         }
+    }
+
+    /** Suspend counterpart of [asking], for the sources whose client is a coroutine. */
+    private suspend fun askingSuspend(provider: String, track: Track, block: suspend () -> Lyrics?): Lyrics? {
+        if (health.isMissing(track.key, provider)) return null
+        val lostBefore = health.lostCount()
+        val found = block()
+        if (found == null && health.lostCount() == lostBefore) health.noteMissing(track.key, provider)
+        return found
     }
 
     /**
