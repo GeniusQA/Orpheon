@@ -190,8 +190,8 @@ class LyricsViewModel constructor() : ViewModel() {
      * instead of waiting for the user to open the lyrics and press translate. The platform's own
      * translations still win; Google is only the fallback, as in the manual path.
      */
-    private fun autoTranslateLocal(track: LyricsApi.Track, state: State.Loaded) {
-        if (track.trackId.isNotBlank()) return
+    private fun autoTranslateLocal(track: LyricsApi.Track, state: State.Loaded, force: Boolean = false) {
+        if (!force && track.trackId.isNotBlank()) return
         val target = runCatching {
             com.music.spotui.data.preferences.getLyricTranslateLang(com.music.spotui.di.Graph.app)
         }.getOrNull().orEmpty().ifBlank { java.util.Locale.getDefault().language.ifBlank { "en" } }
@@ -201,6 +201,20 @@ class LyricsViewModel constructor() : ViewModel() {
             state.lyrics.translationsFor(target) == null && state.sourceLanguage == null) return
         autoTranslated = loadedKey to state.lyrics
         translate(state, target, showWhenDone = true)
+    }
+
+    /** Show a lyric picked in the search sheet, without another resolver pass replacing it. */
+    fun useLyrics(track: LyricsApi.Track, lyrics: Lyrics) {
+        loadedKey = track.key
+        viewModelScope.launch(Dispatchers.IO) {
+            LyricsApi.adopt(track, lyrics)
+            withContext(Dispatchers.Main) {
+                if (loadedKey != track.key) return@withContext
+                val state = loadedState(lyrics)
+                _state.value = state
+                autoTranslateLocal(track, state, force = true)
+            }
+        }
     }
 
     fun toggleTranslation(targetLang: String) {

@@ -1,0 +1,21 @@
+<resources>
+    <string name="lyrics_tools">歌词设置</string>
+    <string name="lyrics_tools_search">歌词搜索</string>
+    <string name="lyrics_tools_title">歌词标题</string>
+    <string name="lyrics_tools_progress">歌词进度</string>
+    <string name="lyrics_tools_font">歌词字体</string>
+    <string name="lyrics_tools_color">歌词颜色</string>
+    <string name="lyrics_tools_title_hint">在歌词上方显示歌曲标题</string>
+    <string name="lyrics_tools_search_song">歌曲</string>
+    <string name="lyrics_tools_search_artist">歌手</string>
+    <string name="lyrics_tools_search_action">搜索</string>
+    <string name="lyrics_tools_searching">正在同时搜索已启用的来源…</string>
+    <string name="lyrics_tools_no_results">启用的来源都没有找到这首歌</string>
+    <string name="lyrics_tools_use">使用</string>
+    <string name="lyrics_tools_progress_detail">歌词慢了：−0.5 秒 · 歌词快了：+0.5 秒</string>
+    <string name="lyrics_tools_progress_reset">重置</string>
+    <string name="lyrics_tools_font_detail">左右滑动调整歌词字体大小</string>
+    <string name="lyrics_tools_color_detail">选择歌词颜色，或跟随播放器</string>
+    <string name="lyrics_tools_color_default">跟随播放器</string>
+    <string name="lyrics_tools_close">关闭</string>
+</resources>

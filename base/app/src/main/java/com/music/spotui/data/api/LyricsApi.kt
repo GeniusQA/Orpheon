@@ -221,6 +221,27 @@ object LyricsApi {
      */
     data class Source(val id: String, val name: String, val words: Boolean = false, val setAside: String? = null)
 
+    /** One read-only answer from [searchSources], for the picker's swipeable platform pages. */
+    data class SearchHit(val sourceId: String, val sourceName: String, val lyrics: Lyrics)
+
+    /**
+     * Ask every enabled provider that can work from just a title and artist, in parallel. Results
+     * are not cached: the user is comparing catalogues, not changing the playing song's lyrics yet.
+     */
+    suspend fun searchSources(title: String, artist: String): List<SearchHit> = withContext(Dispatchers.IO) {
+        val track = Track("", title.trim(), artist.trim(), "", 0L)
+        val ids = LyricsSourcePref.ALL.filter { id ->
+            sourceEnabled(id) && id != "spotify" && id != "amll" && (id != "genius" || geniusOn)
+        }
+        coroutineScope {
+            ids.map { id -> async { runCatching {
+                withinSuspend(12_000L) { askSource(track, id) }?.takeIf { !it.isEmpty }?.let {
+                    SearchHit(id, LyricsSourcePref.NAMES[id] ?: id, it)
+                }
+            }.getOrNull() } }.awaitAll().filterNotNull()
+        }
+    }
+
     private fun allSetAside(vararg ids: String): String? = ids.map { health.reason(it) }.takeIf { r -> r.all { it != null } }?.first()
 
     /** The six HyperLyrics platform clients, all called through [ReferenceLyricSources]. */
@@ -252,6 +273,13 @@ object LyricsApi {
         }
         runCatching { com.music.spotui.extensions.Extensions.lyricsSources() }.getOrDefault(emptyList())
             .forEach { (id, name) -> add(Source("ext:$id", name)) }
+    }
+
+    /** Apply a lyric chosen in the search picker to the playing song, then let the view model show it. */
+    suspend fun adopt(track: Track, lyrics: Lyrics) = withContext(Dispatchers.IO) {
+        cache[track.key] = lyrics
+        LyricsDisk.write(track.key, lyrics)
+        romanizeLater(track, lyrics)
     }
 
     /** The [Source.id] the shown [lyrics] came from, or null when it cannot tell (an extension's own provider name). */

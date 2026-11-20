@@ -1,0 +1,21 @@
+<resources>
+    <string name="lyrics_tools">Lyrics settings</string>
+    <string name="lyrics_tools_search">Search lyrics</string>
+    <string name="lyrics_tools_title">Song title</string>
+    <string name="lyrics_tools_progress">Lyrics progress</string>
+    <string name="lyrics_tools_font">Lyrics font</string>
+    <string name="lyrics_tools_color">Lyrics color</string>
+    <string name="lyrics_tools_title_hint">Show the title above the lyrics</string>
+    <string name="lyrics_tools_search_song">Song</string>
+    <string name="lyrics_tools_search_artist">Artist</string>
+    <string name="lyrics_tools_search_action">Search</string>
+    <string name="lyrics_tools_searching">Searching enabled sources…</string>
+    <string name="lyrics_tools_no_results">No enabled source found this song</string>
+    <string name="lyrics_tools_use">Use</string>
+    <string name="lyrics_tools_progress_detail">Late: −0.5 s · Early: +0.5 s</string>
+    <string name="lyrics_tools_progress_reset">Reset</string>
+    <string name="lyrics_tools_font_detail">Drag to change the lyric size</string>
+    <string name="lyrics_tools_color_detail">Choose a colour, or follow the player</string>
+    <string name="lyrics_tools_color_default">Follow player</string>
+    <string name="lyrics_tools_close">Close</string>
+</resources>

@@ -14,6 +14,7 @@ package com.music.spotui.ui.immersive.lyrics
 
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material.icons.rounded.Abc
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Translate
 import com.music.spotui.ui.components.secondaryClick
 import android.os.Build
@@ -35,6 +36,7 @@ import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.calculateTopPadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -103,7 +105,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.myspoti.engine.R
 import com.music.spotui.data.entity.LyricLine
 import com.music.spotui.data.entity.Lyrics
+import com.music.spotui.data.preferences.LyricsColorPref
+import com.music.spotui.data.preferences.LyricsFontScalePref
+import com.music.spotui.data.preferences.LyricsOffsetPref
 import com.music.spotui.data.preferences.LyricsRomanizationPref
+import com.music.spotui.data.preferences.LyricsTitlePref
 import com.music.spotui.di.Graph
 import com.music.spotui.di.SongPlayer
 import com.music.spotui.ui.immersive.Immersive
@@ -162,6 +168,8 @@ fun ImmersiveLyricsPanel(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val vm: LyricsViewModel = viewModel()
+    var toolsOpen by remember { mutableStateOf(false) }
+    if (toolsOpen) LyricsToolsSheet(vm) { toolsOpen = false }
     val song = Graph.currentSongState
     // An AutoMix mix or a crossfade: the words of the song going out until half way, at its own
     // position, as the title and the cover (SongBlend). Switched at the start, the new song's words
@@ -182,9 +190,14 @@ fun ImmersiveLyricsPanel(
     val heldKey = androidx.compose.runtime.remember { arrayOf(liveKey) }
     if (!hold) heldKey[0] = liveKey
     val trackKey = if (hold) heldKey[0] else liveKey
-    DisposableEffect(hold, blend) {
-        lyricsPosition = if (hold && blend != null) ({ blend.positionMs().coerceAtLeast(0L) }) else ({ SongPlayer.getCurrentPosition().coerceAtLeast(0L) })
-        onDispose { lyricsPosition = { SongPlayer.getCurrentPosition().coerceAtLeast(0L) } }
+    val timingOffset = LyricsOffsetPref.ms
+    DisposableEffect(hold, blend, timingOffset) {
+        lyricsPosition = if (hold && blend != null) {
+            { (blend.positionMs() + timingOffset).coerceAtLeast(0L) }
+        } else {
+            { (SongPlayer.getCurrentPosition() + timingOffset).coerceAtLeast(0L) }
+        }
+        onDispose { lyricsPosition = { SongPlayer.getCurrentPosition() + LyricsOffsetPref.ms } }
     }
     val selecting by vm.selecting.collectAsState()
     val picked by vm.picked.collectAsState()
@@ -239,10 +252,11 @@ fun ImmersiveLyricsPanel(
                     val target = com.music.spotui.ui.components.readerLanguage()
                     val canRomanize = current.lyrics.hasRomanization
                     val canTranslate = !LyricsViewModel.sameLanguage(current.sourceLanguage, target)
-                    if (!selecting && (canRomanize || canTranslate)) {
-                        val layoutDirection = LocalLayoutDirection.current
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    val layoutDirection = LocalLayoutDirection.current
+                    if (!selecting) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalAlignment = Alignment.End,
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
                                 .padding(
@@ -263,6 +277,25 @@ fun ImmersiveLyricsPanel(
                                 loading = current.translating && current.translationRequested,
                                 onClick = { vm.toggleTranslation(target) },
                             )
+                            LyricsToggle(
+                                icon = Icons.Rounded.Tune,
+                                description = stringResource(R.string.lyrics_tools),
+                                on = false,
+                                onClick = { toolsOpen = true },
+                            )
+                        }
+                    }
+                    if (LyricsTitlePref.shown) {
+                        Column(
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(
+                                    top = contentPadding.calculateTopPadding() + 4.dp,
+                                    start = Immersive.Gutter + contentPadding.calculateStartPadding(layoutDirection),
+                                ),
+                        ) {
+                            Text(title, style = Immersive.BodyStrong.copy(color = lyricsTextColor(true)))
+                            Text(artist, style = Immersive.Caption.copy(color = lyricsTextColor(false)))
                         }
                     }
                     if (selecting) ShareBar(
@@ -276,6 +309,15 @@ fun ImmersiveLyricsPanel(
         }
     }
 }
+
+/** The lyric face at the user's chosen size: source translations stay smaller than the sung words. */
+private fun lyricFace(base: TextStyle, scale: Float = LyricsFontScalePref.value): TextStyle =
+    base.copy(fontSize = base.fontSize * scale, lineHeight = base.lineHeight * scale)
+
+/** The active shade is the chosen colour; the other lines stay readable but quieter. */
+private fun lyricsTextColor(active: Boolean): Color = LyricsColorPref.value?.let { argb ->
+    Color(argb).copy(alpha = if (active) 1f else 0.72f)
+} ?: if (active) Color.White else Immersive.TextSecondary
 
 /** A round toggle over the lyrics, lit white while what it shows is on; a spinner while that is fetched. */
 @Composable
@@ -746,9 +788,9 @@ private fun PanelRow(
     }
 
     val style = if (synced) {
-        Immersive.Lyric
+        lyricFace(Immersive.Lyric)
     } else {
-        Immersive.Lyric.copy(fontSize = 26.sp, lineHeight = 33.sp)
+        lyricFace(Immersive.Lyric.copy(fontSize = 26.sp, lineHeight = 33.sp))
     }
     val lane = endLane(row, duet)
     val lineStyle = remember(style, row.text, lane) { voiceStyle(style, row.text, lane) }
@@ -876,7 +918,7 @@ private fun PanelRow(
             val romanized = row.romanization.takeIf { romanizing }
             if (row.background != null) {
                 PanelBackground(
-                    row = row, clock = clock, style = secondaryStyle(BACKGROUND_STYLE, lane),
+                    row = row, clock = clock, style = secondaryStyle(lyricFace(BACKGROUND_STYLE), lane),
                     isActive = isActive, sung = sung, synced = synced, lane = lane,
                     modifier = Modifier.fillMaxWidth().padding(start = GLOW_ROOM, end = GLOW_ROOM, bottom = if (romanized != null || translation != null) 4.dp else GLOW_ROOM),
                 )
@@ -884,16 +926,16 @@ private fun PanelRow(
             if (romanized != null) {
                 Text(
                     text = romanized,
-                    style = secondaryStyle(ROMANIZATION_STYLE, lane),
-                    color = Immersive.TextSecondary,
+                    style = secondaryStyle(lyricFace(ROMANIZATION_STYLE), lane),
+                    color = lyricsTextColor(false),
                     modifier = Modifier.fillMaxWidth().padding(start = GLOW_ROOM, end = GLOW_ROOM, bottom = if (translation != null) 10.dp else GLOW_ROOM),
                 )
             }
             if (translation != null) {
                 Text(
                     text = translation,
-                    style = secondaryStyle(TRANSLATION_STYLE, lane),
-                    color = Immersive.TextSecondary,
+                    style = secondaryStyle(lyricFace(TRANSLATION_STYLE), lane),
+                    color = lyricsTextColor(false),
                     modifier = Modifier.fillMaxWidth().padding(start = GLOW_ROOM, end = GLOW_ROOM, bottom = GLOW_ROOM),
                 )
             }
@@ -1094,7 +1136,7 @@ private fun PanelVoice(
     // handover rather than cut, so a line warms as it is reached and cools as it is left.
     // Lyrics with no timing have no line being sung, and stay white throughout.
     val color by animateColorAsState(
-        targetValue = if (isActive || !synced) Color.White else Immersive.TextSecondary.copy(alpha = 0.85f),
+        targetValue = lyricsTextColor(isActive || !synced),
         label = "lyricLineColor",
     )
     if (row.isWordSynced && synced) {
@@ -1152,7 +1194,7 @@ private fun PanelBackground(
     modifier: Modifier = Modifier,
 ) {
     val color by animateColorAsState(
-        targetValue = if (isActive || !synced) Color.White else Immersive.TextSecondary.copy(alpha = 0.85f),
+        targetValue = lyricsTextColor(isActive || !synced),
         label = "lyricBackgroundColor",
     )
     val dimmer = modifier.graphicsLayer { alpha = BACKGROUND_ALPHA }

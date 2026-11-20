@@ -27,6 +27,7 @@ class MyspotiApplication : Application() {
         // Spotify session (hidden Web Player + API), caches, downloads, data saver.
         Graph.init(this)
         SongPlayer.attachEngine(Graph.currentSongState)
+        com.music.spotui.data.preferences.loadLyricsDisplayPrefs(this)
         // Headphones or Bluetooth gone: pause rather than play on the speaker.
         com.music.spotui.di.NoisyAudio.register(this)
         // Downloaded songs are no longer reported to Spotify: drop the old report queue,
