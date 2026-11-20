@@ -166,7 +166,7 @@ dependencies {
     // Virtual time for the tests of timed coroutines (graces, timeouts): no real waits.
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test-jvm:1.11.0")
     // The real org.json in unit tests (android.jar only has stubs).
-    testImplementation("org.json:json:20240303")
+    testImplementation("org.json:json:20260814")
     // A real XML pull parser in unit tests (the TTML lyrics parser; the tests skip themselves without it).
     testImplementation("net.sf.kxml:kxml2:2.3.0")
     // Roborazzi asks for kotlinx-io 0.3.3; Ktor (removed) had raised it to 0.9.1, the version the unit tests ran with.
