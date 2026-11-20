@@ -308,7 +308,7 @@ internal object ReferenceLyricSources {
 
     private fun qqMusic(track: LyricsApi.Track): Lyrics? {
         val candidates = qqSearch(track) ?: qqCatalog(track)
-        val song = candidates?.firstOrNull() ?: return null
+        val song = candidates?.takeIf { it.length() > 0 }?.optJSONObject(0) ?: return null
         val id = song.optLong("id").takeIf { it > 0 } ?: return null
         val title = song.optString("title").ifBlank { track.title }
         val artist = song.optString("artist").ifBlank { track.artist }
