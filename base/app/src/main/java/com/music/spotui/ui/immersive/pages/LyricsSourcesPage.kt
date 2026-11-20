@@ -77,7 +77,7 @@ internal fun LyricsSourcesPage(back: () -> Unit) {
                     LyricsSourcePref.setAuto(ctx, it)
                     LyricsApi.forgetAll()
                 },
-                detail = if (auto) "开启时按内置最优顺序并发取词，先到先显示" else "关闭后按下方顺序依次尝试，可长按手柄拖动排序",
+                detail = if (auto) "TTML 源优先，其余来源同时检索、先到先显示，逐字歌词或更优的翻译到达后自动切换" else "关闭后按下方顺序依次尝试，可长按手柄拖动排序",
             )
         }
         item(key = "sources:header") {

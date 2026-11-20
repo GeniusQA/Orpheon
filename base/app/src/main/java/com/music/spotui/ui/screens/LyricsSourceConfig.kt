@@ -82,7 +82,7 @@ internal fun LyricsSourceConfig(ctx: android.content.Context) {
             ) {
                 Column(Modifier.weight(1f)) {
                     Text("自动选择最优来源", color = AppText, fontSize = 15.sp)
-                    Text("开启时按内置最优顺序并发取词，先到先显示", color = AppMuted, fontSize = 12.sp)
+                    Text("TTML 源优先，其余来源同时检索、先到先显示，逐字歌词或更优的翻译到达后自动切换", color = AppMuted, fontSize = 12.sp)
                 }
                 Switch(checked = auto, onCheckedChange = null)
             }

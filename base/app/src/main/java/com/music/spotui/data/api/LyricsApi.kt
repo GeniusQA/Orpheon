@@ -223,7 +223,11 @@ object LyricsApi {
 
     private fun allSetAside(vararg ids: String): String? = ids.map { health.reason(it) }.takeIf { r -> r.all { it != null } }?.first()
 
-    private val WORD_SOURCES = setOf("amll", "lunabeat", "netease", "qqmusic", "kuwo", "kugou")
+    /** The six HyperLyrics platform clients, all called through [ReferenceLyricSources]. */
+    private val REFERENCE_SOURCES = setOf("amll", "lunabeat", "netease", "qqmusic", "kuwo", "kugou")
+
+    private val WORD_SOURCES = REFERENCE_SOURCES + "spotify"
+    private val TTML_SOURCES = setOf("amll", "lunabeat")
 
     /** The providers that can be tried for [track], in the configured order; the extensions giving lyrics come last (`ext:<id>`). */
     fun sources(track: Track): List<Source> = buildList {
@@ -232,8 +236,9 @@ object LyricsApi {
         for (id in sourceOrder()) {
             if (!sourceEnabled(id)) continue
             if (id == "genius" && !geniusOn) continue
-            if (id == "amll" && track.trackId.isBlank()) continue
+            if ((id == "amll" || id == "spotify") && track.trackId.isBlank()) continue
             val (name, words, reason) = when (id) {
+                "spotify" -> Triple("Spotify", true, null)
                 "amll" -> Triple("AMLL TTML DB", true, allSetAside("amll"))
                 "lunabeat" -> Triple("LunaBeat", true, allSetAside("lunabeat"))
                 "netease" -> Triple("NetEase", true, allSetAside("netease"))
@@ -253,6 +258,7 @@ object LyricsApi {
     fun sourceOf(lyrics: Lyrics): String? {
         val p = lyrics.provider.orEmpty().lowercase()
         return when {
+            "spotify" in p || lyrics.colors != null -> "spotify"
             "amll" in p -> "amll"
             "lunabeat" in p -> "lunabeat"
             "kugou" in p -> "kugou"
@@ -264,23 +270,29 @@ object LyricsApi {
         }
     }
 
+    /** Six platform clients come from HyperLyrics; Spotify and Genius keep Orpheon's own code. */
+    private suspend fun askSource(track: Track, id: String): Lyrics? = when (id) {
+        "spotify" -> fromSpotify(track)
+        "genius" -> fromGenius(cleanTitle(track.title), track.artist.substringBefore(",").trim())
+        in REFERENCE_SOURCES -> ReferenceLyricSources.fetch(id, track)
+        else -> null
+    }
+
+    private fun hasTranslation(lyrics: Lyrics?): Boolean =
+        lyrics?.translationLanguage != null && lyrics.lines.any { !it.translation.isNullOrBlank() }
+
     /**
      * The lyrics of [track] from the provider [sourceId] alone ([Source.id]), asked at once (a
      * set-aside provider, a cached "no lyrics" and the cache of the song do not count). What it gives
      * replaces the song's lyrics in memory and storage; null (nothing changes) when it has none.
      */
     suspend fun fetchFrom(track: Track, sourceId: String): Lyrics? = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-        val title = cleanTitle(track.title)
-        val artist = track.artist.substringBefore(",").trim()
-        fun <T> byHand(block: () -> T): T { bypass.set(true); try { return block() } finally { bypass.remove() } }
         suspend fun <T> byHandSuspend(block: suspend () -> T): T { bypass.set(true); try { return block() } finally { bypass.remove() } }
         val found = try {
             when {
                 sourceId.startsWith("ext:") -> com.music.spotui.extensions.Extensions.lyricsFromExtension(
                     sourceId.removePrefix("ext:"), track.trackId, track.title, track.artist, track.album, track.durationMs, track.coverUrl)
-                sourceId == "genius" -> byHand { fromGenius(title, artist) }
-                sourceId in WORD_SOURCES -> byHandSuspend { ReferenceLyricSources.fetch(sourceId, track) }
-                else -> null
+                else -> byHandSuspend { askSource(track, sourceId) }
             }
         } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { Log.d("LyricsApi", "$sourceId by hand: ${e.javaClass.simpleName}"); null }
         val chosen = found?.takeIf { !it.isEmpty } ?: return@withContext null
@@ -324,7 +336,7 @@ object LyricsApi {
                 com.music.spotui.extensions.Extensions.lyricsFor(track.trackId, track.title, track.artist, track.album, track.durationMs, track.coverUrl)
             }
         } else null
-        val own = if (wordSync) wordFirst(track) else lineFallbacks(track)
+        val own = resolveOwn(track)
         val answer = when {
             ext == null -> null
             own != null && com.music.spotui.extensions.LyricsMerge.level(own) == 3 && com.music.spotui.extensions.LyricsMerge.isSpotifyComplete(own) &&
@@ -525,6 +537,66 @@ object LyricsApi {
             return LyricsExtras.carry(to, from)
         }
         return to
+    }
+
+    /**
+     * Reference behaviour: auto asks TTML sources first, then all the other enabled sources at
+     * once (showing the first answer), and keeps the best one: word-synced, then source
+     * translation, then synced, then TTML, then the configured order. Auto off uses that order
+     * one source at a time.
+     */
+    private suspend fun resolveOwn(track: Track): Lyrics? = coroutineScope {
+        val order = sourceOrder()
+        val ids = order.filter { id ->
+            sourceEnabled(id) &&
+                (id != "genius" || geniusOn) &&
+                ((id != "amll" && id != "spotify") || track.trackId.isNotBlank())
+        }
+        if (ids.isEmpty()) return@coroutineScope null
+        val auto = runCatching {
+            com.music.spotui.data.preferences.LyricsSourcePref.isAuto(com.music.spotui.di.Graph.app)
+        }.getOrDefault(true)
+        if (!auto) {
+            for (id in ids) {
+                val found = withinSuspend(WORD_WAIT_MS) {
+                    askingSuspend(id, track) { askSource(track, id) }
+                }
+                if (!found.isNullOrEmpty()) return@coroutineScope found
+            }
+            return@coroutineScope null
+        }
+        val shown = java.util.concurrent.atomic.AtomicBoolean(false)
+        val asked = linkedMapOf<String, kotlinx.coroutines.Deferred<Lyrics?>>()
+        fun ask(id: String) {
+            asked[id] = async {
+                val found = withinSuspend(WORD_WAIT_MS) {
+                    askingSuspend(id, track) { askSource(track, id) }
+                }
+                if (!found.isNullOrEmpty() && shown.compareAndSet(false, true)) showEarly(track, found)
+                found
+            }
+        }
+        ids.filter { it in TTML_SOURCES }.forEach(::ask)
+        ids.filter { it !in TTML_SOURCES }.forEach(::ask)
+        val results = asked.mapValues { it.value.await() }.filterValues { !it.isNullOrEmpty() }
+        var bestEntry = results.entries.sortedWith(
+            compareByDescending<Map.Entry<String, Lyrics?>> { it.value?.wordSynced == true }
+                .thenByDescending { hasTranslation(it.value) }
+                .thenByDescending { it.value?.synced == true }
+                .thenByDescending { it.key in TTML_SOURCES }
+                .thenBy { order.indexOf(it.key).let { i -> if (i < 0) Int.MAX_VALUE else i } }
+        ).firstOrNull()
+        var best = bestEntry?.value
+        val spotify = results["spotify"]
+        if (best != null && spotify != null && spotify.colors != null) {
+            best = (alignTo(best, spotify) ?: best).copy(colors = spotify.colors)
+        }
+        if (best != null && !hasTranslation(best)) {
+            val translated = results.entries.filter { hasTranslation(it.value) }
+                .minByOrNull { order.indexOf(it.key).let { i -> if (i < 0) Int.MAX_VALUE else i } }
+            if (translated != null && translated.key != bestEntry?.key) best = LyricsExtras.carry(best, translated.value!!)
+        }
+        best
     }
 
     /**

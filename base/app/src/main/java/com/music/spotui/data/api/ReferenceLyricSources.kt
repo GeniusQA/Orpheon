@@ -427,9 +427,11 @@ internal object ReferenceLyricSources {
             if (hex.length % 2 != 0) return@runCatching ""
             val bytes = ByteArray(hex.length / 2) { i -> ((hex[i * 2].hex() shl 4) + hex[i * 2 + 1].hex()).toByte() }
             if (bytes.size % 8 != 0) return@runCatching ""
-            val cipher = Cipher.getInstance("DESede/ECB/NoPadding")
-            cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(QQ_3DES_KEY.toByteArray(StandardCharsets.UTF_8), "DESede"))
-            inflate(cipher.doFinal(bytes))
+            val schedules = QmTripleDes.tripleDesKeySetup(
+                QQ_3DES_KEY.toByteArray(StandardCharsets.UTF_8), QmTripleDes.DECRYPT)
+            val plain = QmTripleDes.tripleDesCrypt(bytes, schedules)
+            app.myspoti.host.android.Logbook.log("QQ QRC header: %02X %02X".format(Locale.ROOT, plain[0], plain[1]))
+            inflate(plain)
         }.getOrDefault("")
     }
 

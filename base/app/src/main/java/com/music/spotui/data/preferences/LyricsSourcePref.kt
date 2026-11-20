@@ -14,11 +14,12 @@ import android.content.Context
 object LyricsSourcePref {
     /** Built-in sources, in the resolver's default (best) order. */
     val ALL: List<String> = listOf(
-        "amll", "lunabeat", "netease", "qqmusic", "kuwo", "kugou", "genius"
+        "amll", "lunabeat", "netease", "qqmusic", "kuwo", "kugou", "spotify", "genius"
     )
 
     /** Human-readable names (brands, not translated), matching LyricsApi.Source.name. */
     val NAMES: Map<String, String> = mapOf(
+        "spotify" to "Spotify",
         "amll" to "AMLL TTML DB",
         "lunabeat" to "LunaBeat",
         "netease" to "NetEase",
