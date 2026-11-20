@@ -8,6 +8,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
 import java.io.ByteArrayInputStream
+import java.io.InputStream
 import java.util.concurrent.TimeUnit
 
 /**
@@ -33,7 +34,7 @@ internal class LoginProxy(
 
         val contentType = request.requestHeaders.entries
             .firstOrNull { it.key.equals("Content-Type", true) }?.value
-        val bodyBytes = request.postData?.use { it.readBytes() }
+        val bodyBytes = postData(request)
         val body = if (bodyBytes != null && method !in SIMPLE_METHODS) {
             RequestBody.create(contentType?.let { MediaType.parse(it) }, bodyBytes)
         } else null
@@ -69,6 +70,11 @@ internal class LoginProxy(
         } finally {
             response.close()
         }
+    }.getOrNull()
+
+    /** WebResourceRequest's POST stream is not exposed to this module's Kotlin stub; read it reflectively. */
+    private fun postData(request: WebResourceRequest): ByteArray? = runCatching {
+        (request.javaClass.getMethod("getPostData").invoke(request) as? InputStream)?.use { it.readBytes() }
     }.getOrNull()
 
     companion object {
