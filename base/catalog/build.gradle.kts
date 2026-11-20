@@ -14,6 +14,6 @@ dependencies {
     implementation(libs.serialization.json)
     implementation(libs.okhttp)
     // The same Rhino as the extensions.
-    implementation("org.mozilla:rhino:1.8.1")
+    implementation("org.mozilla:rhino:1.9.2")
     testImplementation("junit:junit:4.13.2")
 }
