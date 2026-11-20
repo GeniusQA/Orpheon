@@ -242,30 +242,30 @@ private fun ColorTools(onBack: () -> Unit) {
     val selected = LyricsColorPref.value
     val colors = listOf(
         null,
-        Color.White,
-        Color(0xFFFF4F7B),
-        Color(0xFFFFCC00),
-        Color(0xFF4CD964),
-        Color(0xFF5AC8FA),
-        Color(0xFFAF52DE),
-        Color(0xFFFF9500),
+        Color.White.value.toInt(),
+        Color(0xFFFF4F7B).value.toInt(),
+        Color(0xFFFFCC00).value.toInt(),
+        Color(0xFF4CD964).value.toInt(),
+        Color(0xFF5AC8FA).value.toInt(),
+        Color(0xFFAF52DE).value.toInt(),
+        Color(0xFFFF9500).value.toInt(),
     )
     ToolPage(stringResource(R.string.lyrics_tools_color), stringResource(R.string.lyrics_tools_color_detail), onBack) {
         Text(
             "Aa",
-            style = Immersive.Lyric.copy(color = selected ?: Color.White),
+            style = Immersive.Lyric.copy(color = selected?.let { Color(it) } ?: Color.White),
             modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
             textAlign = TextAlign.Center,
         )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            colors.forEach { color ->
+            colors.forEach { argb ->
                 Box(
-                    Modifier.size(38.dp).background(if (color == null) Immersive.Raised else color)
-                        .clickable { LyricsColorPref.set(context, color?.value?.toInt()) },
+                    Modifier.size(38.dp).background(if (argb == null) Immersive.Raised else Color(argb))
+                        .clickable { LyricsColorPref.set(context, argb) },
                     contentAlignment = Alignment.Center,
                 ) {
-                    if (selected == color) {
-                        Box(Modifier.size(12.dp).background(if (color == null) Immersive.Accent else Color.Black, CircleShape))
+                    if (selected == argb) {
+                        Box(Modifier.size(12.dp).background(if (argb == null) Immersive.Accent else Color.Black, CircleShape))
                     }
                 }
             }
@@ -276,8 +276,8 @@ private fun ColorTools(onBack: () -> Unit) {
 }
 
 @Composable
-private fun RgbSliders(selected: Color?) {
-    val base = selected ?: Color.White
+private fun RgbSliders(selectedArgb: Int?) {
+    val base = selectedArgb?.let { Color(it) } ?: Color.White
     ColorSlider("R", base.red) { Color(it, base.green, base.blue) }
     ColorSlider("G", base.green) { Color(base.red, it, base.blue) }
     ColorSlider("B", base.blue) { Color(base.red, base.green, it) }
