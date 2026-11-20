@@ -223,7 +223,7 @@ object LyricsApi {
 
     private fun allSetAside(vararg ids: String): String? = ids.map { health.reason(it) }.takeIf { r -> r.all { it != null } }?.first()
 
-    private val WORD_SOURCES = setOf("amll", "lyricsplus", "lrcred", "netease", "kugou")
+    private val WORD_SOURCES = setOf("amll", "lyricsplus", "lrcred", "netease", "kugou", "qqmusic")
 
     /** The providers that can be tried for [track], in the configured order; the extensions giving lyrics come last (`ext:<id>`). */
     fun sources(track: Track): List<Source> = buildList {
@@ -243,6 +243,8 @@ object LyricsApi {
                 "lrclib" -> Triple("LRCLIB", false, allSetAside("lrclib"))
                 "netease" -> Triple("NetEase", true, allSetAside("netease"))
                 "genius" -> Triple("Genius", false, allSetAside("genius"))
+                "qqmusic" -> Triple("QQ Music", true, allSetAside("qqmusic"))
+                "kuwo" -> Triple("KuWo", false, allSetAside("kuwo"))
                 else -> continue
             }
             add(Source(id, name, words, reason))
@@ -262,6 +264,8 @@ object LyricsApi {
             "lrclib" in p -> "lrclib"
             "netease" in p -> "netease"
             "genius" in p -> "genius"
+            "qq music" in p -> "qqmusic"
+            "kuwo" in p -> "kuwo"
             lyrics.colors != null -> "spotify"
             else -> null
         }
@@ -296,6 +300,8 @@ object LyricsApi {
                 }
                 sourceId == "netease" -> byHand { fromNetEaseWords(title, artist, durationMs) ?: fromNetEase(title, artist, durationSec) }
                 sourceId == "genius" -> byHand { fromGenius(title, artist) }
+                sourceId == "qqmusic" -> byHand { LyricsPlatformSources.fromQQMusic(title, artist, durationMs) }
+                sourceId == "kuwo" -> byHand { LyricsPlatformSources.fromKuWo(title, artist, durationMs) }
                 else -> null
             }
         } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { Log.d("LyricsApi", "$sourceId by hand: ${e.javaClass.simpleName}"); null }
@@ -355,8 +361,8 @@ object LyricsApi {
             }
         }
         var result = com.music.spotui.extensions.LyricsMerge.choose(own, answer?.getOrNull())
-        // Nothing anywhere: Genius's plain text, unless the user turned the extra sources off.
-        if (result == null && !extraSources && !extraSourcesOff && geniusOn)
+        // Nothing anywhere: Genius's plain text when its own switch is on.
+        if (result == null && geniusOn)
             result = asking("genius", track) { fromGenius(cleanTitle(track.title), track.artist.substringBefore(",").trim()) }
         val pending = answer?.isFailure == true
         cache[track.key] = when {
@@ -561,16 +567,17 @@ object LyricsApi {
         // Hand-timed syllable by syllable by its community (CC0), found by the song's Spotify id.
         val amll = async { if (sourceEnabled("amll")) within(WORD_WAIT_MS) { asking("amll", track) { fromAmll(track.trackId) } } else null }
         val netease = async { if (sourceEnabled("netease")) within(WORD_WAIT_MS) { asking("netease", track) { fromNetEaseWords(title, artist, durationMs) } } else null }
+        val qq = async { if (sourceEnabled("qqmusic")) within(WORD_WAIT_MS) { asking("qqmusic", track) { LyricsPlatformSources.fromQQMusic(title, artist, durationMs) } } else null }
         val sp = spotify.await()
         // Shown at once while the word timings or the backing vocals are looked for (reported: lyrics slow to come).
         if (sp != null) showEarly(track, sp)
         if (sp != null && sp.wordSynced && sp.uncapped) {
-            kugou.cancel(); netease.cancel()
+            kugou.cancel(); netease.cancel(); qq.cancel()
             return@coroutineScope withBacks(sp, amll, plus, red)
         }
         // Without Spotify's own (no account, or none for the song) every catalogue still answers.
         val words = (amll.await()?.takeIf { it.wordSynced } ?: plus.await()?.takeIf { it.wordSynced } ?: red.await()?.takeIf { it.wordSynced }
-            ?: netease.await()?.takeIf { it.wordSynced } ?: kugou.await())?.takeIf { it.wordSynced }
+            ?: netease.await()?.takeIf { it.wordSynced } ?: qq.await()?.takeIf { it.wordSynced } ?: kugou.await())?.takeIf { it.wordSynced }
         when {
             words != null -> alignTo(words, sp)?.copy(colors = sp?.colors)?.let { withBacks(it, amll, plus, red) } ?: sp
             sp != null -> sp
@@ -632,11 +639,6 @@ object LyricsApi {
             val asked = linkedMapOf<String, kotlinx.coroutines.Deferred<Lyrics?>>()
             for (id in sourceOrder()) {
                 if (!sourceEnabled(id)) continue
-                val broadOk = when (id) {
-                    "netease", "genius" -> extraSources && (id != "genius" || geniusOn)
-                    else -> true
-                }
-                if (!broadOk) continue
                 asked[id] = async {
                     asking(id, track) {
                         when (id) {
@@ -649,6 +651,8 @@ object LyricsApi {
                             "netease" -> fromNetEase(title, artist, durationSec)
                             "genius" -> fromGenius(title, artist)
                             "kugou" -> fromKugou(title, artist, track.durationMs)
+                            "qqmusic" -> LyricsPlatformSources.fromQQMusic(title, artist, track.durationMs)
+                            "kuwo" -> LyricsPlatformSources.fromKuWo(title, artist, track.durationMs)
                             else -> null
                         }
                     }

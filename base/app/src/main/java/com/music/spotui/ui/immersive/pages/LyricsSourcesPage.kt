@@ -47,7 +47,6 @@ internal fun LyricsSourcesPage(back: () -> Unit) {
     var auto by remember { mutableStateOf(LyricsSourcePref.isAuto(ctx)) }
     var order by remember { mutableStateOf(LyricsSourcePref.savedOrder(ctx)) }
     var enabled by remember { mutableStateOf(LyricsSourcePref.ALL.associateWith { LyricsSourcePref.isEnabled(ctx, it) }) }
-    var lyricsExtra by remember { mutableStateOf(com.music.spotui.data.preferences.isLyricsExtraSources(ctx)) }
 
     val listState = rememberLazyListState()
     val reorder = rememberReorderableLazyListState(listState) { from, to ->
@@ -68,20 +67,6 @@ internal fun LyricsSourcesPage(back: () -> Unit) {
         onBack = back,
         listState = listState,
     ) {
-        item(key = "sources:gate") {
-            ImmersiveSwitchRow(
-                stringResource(R.string.lyrics_extra_title),
-                checked = lyricsExtra,
-                onChecked = {
-                    lyricsExtra = it
-                    com.music.spotui.data.preferences.setLyricsExtraSources(ctx, it)
-                    LyricsApi.extraSources = it
-                    LyricsApi.extraSourcesOff = !it
-                    LyricsApi.forgetAll()
-                },
-                detail = stringResource(R.string.lyrics_extra_summary),
-            )
-        }
         item(key = "sources:auto") {
             ImmersiveSwitchRow(
                 "自动选择最优来源",

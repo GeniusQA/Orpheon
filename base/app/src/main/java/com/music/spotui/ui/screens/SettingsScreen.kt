@@ -299,20 +299,6 @@ fun SettingsScreen(navController: NavController) {
                     com.music.spotui.data.api.LyricsApi.forgetAll()
                 },
             )
-            // NetEase and Genius after Spotify and LRCLIB (also in the lyrics' own menu).
-            var lyricsExtra by remember { mutableStateOf(com.music.spotui.data.preferences.isLyricsExtraSources(ctx)) }
-            OptionRow(
-                label = stringResource(R.string.lyrics_extra_title),
-                detail = stringResource(R.string.lyrics_extra_summary),
-                checked = lyricsExtra,
-                onChecked = {
-                    lyricsExtra = it
-                    com.music.spotui.data.preferences.setLyricsExtraSources(ctx, it)
-                    com.music.spotui.data.api.LyricsApi.extraSources = it
-                    com.music.spotui.data.api.LyricsApi.extraSourcesOff = !it
-                    com.music.spotui.data.api.LyricsApi.forgetAll()
-                },
-            )
             // Per-source control: auto pick best, or switch/reorder the lyrics sources yourself.
             LyricsSourceConfig(ctx)
             // Genius: the meaning of songs and the notes on their lines, and its lyrics as a last resort.

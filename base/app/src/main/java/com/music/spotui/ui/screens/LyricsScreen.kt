@@ -115,8 +115,6 @@ import com.music.spotui.data.entity.LyricLine
 import com.music.spotui.data.entity.Lyrics
 import com.music.spotui.data.preferences.LyricsRomanizationPref
 import com.music.spotui.data.preferences.getLyricTranslateLang
-import com.music.spotui.data.preferences.isLyricsExtraSources
-import com.music.spotui.data.preferences.setLyricsExtraSources
 import com.music.spotui.di.SongPlayer
 import com.music.spotui.ui.components.rememberFrameClock
 import com.music.spotui.ui.components.shareLyricLines
@@ -742,7 +740,6 @@ private fun LyricsMenu(
     onPickSource: () -> Unit,
 ) {
     val context = LocalContext.current
-    var extra by remember { mutableStateOf(isLyricsExtraSources(context)) }
     var words by remember { mutableStateOf(com.music.spotui.data.preferences.isLyricsWordSync(context)) }
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
         // Word by word (karaoke) or line by line: the app then picks the source by itself.
@@ -777,24 +774,6 @@ private fun LyricsMenu(
         if (canShare) DropdownMenuItem(
             text = { Text(stringResource(R.string.lyrics_share)) },
             onClick = { onDismiss(); onShare() },
-        )
-        DropdownMenuItem(
-            text = {
-                Column {
-                    Text(stringResource(R.string.lyrics_extra_title))
-                    Text(stringResource(R.string.lyrics_extra_summary), fontSize = 12.sp, color = Color.Gray)
-                }
-            },
-            trailingIcon = { if (extra) Icon(Icons.Default.Check, contentDescription = null) },
-            onClick = {
-                extra = !extra
-                setLyricsExtraSources(context, extra)
-                LyricsApi.extraSources = extra
-                // Turned off by hand: Genius is no longer asked even when nothing else has the song.
-                LyricsApi.extraSourcesOff = !extra
-                onDismiss()
-                onReload()
-            },
         )
         if (canPickSource) DropdownMenuItem(text = { Text(stringResource(R.string.lyrics_other_source)) }, onClick = { onDismiss(); onPickSource() })
         DropdownMenuItem(text = { Text(stringResource(R.string.lyrics_reload)) }, onClick = { onDismiss(); onReload() })
