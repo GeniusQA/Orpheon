@@ -149,7 +149,7 @@ internal object ReferenceLyricSources {
         val ids = LinkedHashSet<String>()
         if (track.trackId.isNotBlank()) runCatching {
             app.myspoti.host.android.MyspotiRuntime.api.isrc(android.net.Uri.parse("spotify:track:${track.trackId}"))
-        }.getOrNull()?.trim()?.takeIf { it.isNotEmpty() }?.let { isrc ->
+        }.getOrNull<String>()?.trim()?.takeIf { it.isNotEmpty() }?.let { isrc ->
             ids += isrc.uppercase(Locale.ROOT)
             ids += isrc.lowercase(Locale.ROOT)
         }
