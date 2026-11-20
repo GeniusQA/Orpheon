@@ -321,7 +321,7 @@ internal object ReferenceLyricSources {
             .put("lrc_t", 0).put("qrc_t", 0).put("roma_t", 0).put("trans_t", 0)
             .put("type", 0).put("interval", track.durationMs / 1000))
         val data = runCatching {
-            val root = JSONObject(postJson(QQ_URL, body, qqHeaders()) ?: return null)
+            val root = JSONObject(postJson(QQ_URL, body.toString(), qqHeaders()) ?: return null)
             val module = root.getJSONObject("req_0")
             if (module.optInt("code") != 0) return null
             module.optJSONObject("data")
@@ -340,7 +340,7 @@ internal object ReferenceLyricSources {
             .put("remoteplace", "search.android.keyboard").put("query", keyword)
             .put("search_type", 0).put("num_per_page", 20).put("page_num", 1)
             .put("highlight", 0).put("nqc_flag", 0).put("page_id", 1).put("grp", 1))
-        val root = runCatching { JSONObject(postJson(QQ_URL, body, qqHeaders()) ?: return null) }.getOrNull() ?: return null
+        val root = runCatching { JSONObject(postJson(QQ_URL, body.toString(), qqHeaders()) ?: return null) }.getOrNull() ?: return null
         val module = root.optJSONObject("req_0") ?: return null
         if (module.optInt("code") != 0) return null
         return runCatching {
@@ -372,7 +372,7 @@ internal object ReferenceLyricSources {
                 .put("interval", track.durationMs / 1000)
                 .put("crypt", 0).put("qrc", 0).put("trans", 0).put("roma", 0))
             val module = runCatching {
-                JSONObject(postJson(QQ_URL, body, qqHeaders()) ?: return@runCatching null).optJSONObject("req_0")
+                JSONObject(postJson(QQ_URL, body.toString(), qqHeaders()) ?: return@runCatching null).optJSONObject("req_0")
             }.getOrNull() ?: continue
             val code = module.optInt("code")
             if (code != 0) continue
