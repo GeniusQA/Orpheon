@@ -44,6 +44,8 @@ class LyricsViewModel constructor() : ViewModel() {
     val state: StateFlow<State> = _state
 
     private var loadedKey: String? = null
+    /** Local songs only: the last lyrics for which translation was asked automatically. */
+    private var autoTranslated: Pair<String, Lyrics>? = null
 
     init {
         // Romanizations an extension gave after the lyrics showed join the lines still shown.
@@ -136,7 +138,9 @@ class LyricsViewModel constructor() : ViewModel() {
         // extension had not answered: shown, and asked again (its answer replaces them).
         val cached = LyricsApi.cached(track)
         if (cached != null) {
-            _state.value = loadedState(cached)
+            val state = loadedState(cached)
+            _state.value = state
+            autoTranslateLocal(track, state)
             if (LyricsApi.settled(track)) return
         } else if (!(force && _state.value is State.Loaded)) {
             // Read again (the setting changed): the lyrics shown stay until the new ones replace them.
@@ -163,11 +167,13 @@ class LyricsViewModel constructor() : ViewModel() {
                 // A skip during the fetch: don't show the previous song's lyrics.
                 if (loadedKey != key) return@withContext
                 val shown = (_state.value as? State.Loaded)?.lyrics
-                _state.value = when {
+                val state = when {
                     lyrics == null || lyrics.isEmpty -> if (shown != null) _state.value else State.NotFound
                     shown == lyrics -> _state.value
                     else -> loadedState(lyrics)
                 }
+                _state.value = state
+                if (state is State.Loaded) autoTranslateLocal(track, state)
             }
         }
     }
@@ -178,6 +184,24 @@ class LyricsViewModel constructor() : ViewModel() {
         translationChecked = lyrics.language != null ||
             (lyrics.translationLanguage != null && lyrics.lines.any { !it.translation.isNullOrBlank() }),
     )
+
+    /**
+     * A file of the device has no Spotify id: prepare its translation as soon as its words arrive,
+     * instead of waiting for the user to open the lyrics and press translate. The platform's own
+     * translations still win; Google is only the fallback, as in the manual path.
+     */
+    private fun autoTranslateLocal(track: LyricsApi.Track, state: State.Loaded) {
+        if (track.trackId.isNotBlank()) return
+        val target = runCatching {
+            com.music.spotui.data.preferences.getLyricTranslateLang(com.music.spotui.di.Graph.app)
+        }.getOrNull().orEmpty().ifBlank { java.util.Locale.getDefault().language.ifBlank { "en" } }
+        if (sameLanguage(state.sourceLanguage, target)) return
+        if (autoTranslated?.first == loadedKey && autoTranslated?.second == state.lyrics) return
+        if (!com.music.spotui.data.preferences.GoogleTranslatePref.on &&
+            state.lyrics.translationsFor(target) == null && state.sourceLanguage == null) return
+        autoTranslated = loadedKey to state.lyrics
+        translate(state, target, showWhenDone = true)
+    }
 
     fun toggleTranslation(targetLang: String) {
         val cur = _state.value as? State.Loaded ?: return

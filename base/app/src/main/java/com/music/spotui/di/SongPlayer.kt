@@ -3372,6 +3372,14 @@ object SongPlayer {
             }
             pushNotification(song.copy(coverUri = cover), liked)
             if (songChanged) refreshCurrentLiked()
+            // A file of the device has no Spotify id, but the catalogue sources match by title,
+            // artist and duration. Warm its lyrics when playback starts, as the Spotify path does.
+            if (isPlaying && songChanged &&
+                app.myspoti.power.EnergySettings.state.value.policy.allowBackgroundLookups &&
+                (com.music.spotui.video.MusicVideoController.inForeground ||
+                    !com.music.spotui.data.DataSaver.metered)) {
+                com.music.spotui.data.api.LyricsApi.prefetch(lyricsTrack(song))
+            }
             com.music.spotui.extensions.Extensions.mirrorTick(isPlaying, uri)
             AccountSync.onLocal(t, isPlaying, pos, dur)
             val source = if (t.uri.scheme == "file") com.music.spotui.data.local.ListenHistory.Source.DOWNLOAD
