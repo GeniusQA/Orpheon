@@ -117,7 +117,7 @@ internal object LyricsPlatformSources {
                 buildString {
                     for (i in 0 until lines.length()) {
                         val item = lines.optJSONObject(i) ?: continue
-                        val t = (item.optString("time").toDoubleOrNull() ?: continue) * 1000L
+                        val t = ((item.optString("time").toDoubleOrNull() ?: continue) * 1000L).toLong()
                         append('[').append(time(t)).append(']').append(item.optString("lineLyric")).append('\n')
                     }
                 }
