@@ -206,7 +206,11 @@ class WebPlayerHost(private val context: Context) : BridgeHost {
     private val media = MediaProxy(MediaProxy.client()) { relay.identityPair() }
 
     /** Sign-in requests leave here when this WebView cannot suppress X-Requested-With. */
-    private val login = LoginProxy(LoginProxy.client()) { relay.identityPair() } { cookies() }
+    private val login = LoginProxy(
+        client = LoginProxy.client(),
+        identity = { relay.identityPair() },
+        cookies = { cookies() },
+    )
 
     /**
      * WebView profiles (androidx.webkit MULTI_PROFILE): each account keeps its own cookies and Web
