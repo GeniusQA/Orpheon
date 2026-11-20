@@ -283,6 +283,7 @@ object LyricsApi {
         val durationMs = track.durationMs
         val durationSec = (durationMs / 1000).toInt()
         fun <T> byHand(block: () -> T): T { bypass.set(true); try { return block() } finally { bypass.remove() } }
+        suspend fun <T> byHandSuspend(block: suspend () -> T): T { bypass.set(true); try { return block() } finally { bypass.remove() } }
         val spotify = if (sourceId in WORD_SOURCES) runCatching { fromSpotify(track) }.getOrNull() else null
         val found = try {
             when {
@@ -300,8 +301,8 @@ object LyricsApi {
                 }
                 sourceId == "netease" -> byHand { fromNetEaseWords(title, artist, durationMs) ?: fromNetEase(title, artist, durationSec) }
                 sourceId == "genius" -> byHand { fromGenius(title, artist) }
-                sourceId == "qqmusic" -> byHand { LyricsPlatformSources.fromQQMusic(title, artist, durationMs) }
-                sourceId == "kuwo" -> byHand { LyricsPlatformSources.fromKuWo(title, artist, durationMs) }
+                sourceId == "qqmusic" -> byHandSuspend { LyricsPlatformSources.fromQQMusic(title, artist, durationMs) }
+                sourceId == "kuwo" -> byHandSuspend { LyricsPlatformSources.fromKuWo(title, artist, durationMs) }
                 else -> null
             }
         } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { Log.d("LyricsApi", "$sourceId by hand: ${e.javaClass.simpleName}"); null }
