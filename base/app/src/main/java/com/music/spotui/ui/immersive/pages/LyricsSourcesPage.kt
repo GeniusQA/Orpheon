@@ -61,7 +61,9 @@ internal fun LyricsSourcesPage(back: () -> Unit) {
         LyricsApi.forgetAll()
     }
 
-    val shown = if (auto) LyricsSourcePref.ALL else order
+    // Like the reference settings page: keep showing the saved order; the automatic switch only
+    // disables dragging. The resolver separately uses the built-in best order when auto is on.
+    val shown = order
 
     ImmersivePage(
         title = stringResource(R.string.lyrics_extra_title),
