@@ -85,8 +85,7 @@ object AppStorage {
             runCatching { File(context.cacheDir, "shared").deleteRecursively() }
         }
         withContext(Dispatchers.Main) {
-            if (app.myspoti.host.android.MyspotiRuntime::host.isInitialized)
-                runCatching { app.myspoti.host.android.MyspotiRuntime.host.clearCacheOnly() }
+            runCatching { app.myspoti.host.android.MyspotiRuntime.host.clearCacheOnly() }
         }
     }
 
