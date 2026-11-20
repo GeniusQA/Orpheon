@@ -131,6 +131,14 @@ fun activeDeviceIcon(): ImageVector {
     }
 }
 
+/** The provider of the lyrics currently shown, or null while loading / when there are none. */
+fun matchedLyricsSource(state: com.music.spotui.ui.viewmodel.LyricsViewModel.State): String? {
+    val lyrics = (state as? com.music.spotui.ui.viewmodel.LyricsViewModel.State.Loaded)?.lyrics ?: return null
+    val id = com.music.spotui.data.api.LyricsApi.sourceOf(lyrics)
+    return id?.let { com.music.spotui.data.preferences.LyricsSourcePref.NAMES[it] ?: it }
+        ?: lyrics.provider?.takeIf { it.isNotBlank() }
+}
+
 /**
  * Where the sound comes from while Myspoti's own player plays a song (an extension's stream: its
  * name and the quality it announced; a download; Spotify's codec and bitrate), shown under the

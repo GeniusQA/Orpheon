@@ -673,6 +673,7 @@ fun PlayerScreen(navController: NavController) {
                     title = songTitle,
                     artist = songSinger,
                     coverUri = songCoverUri,
+                    lyricsSource = com.music.spotui.ui.components.matchedLyricsSource(lyricsState),
                     onDevices = { showDevices = true },
                     onQueue = { showQueue = true },
                 )
@@ -1416,6 +1417,7 @@ fun PlayerConnectRow(
     title: String,
     artist: String,
     coverUri: String,
+    lyricsSource: String? = null,
     onDevices: () -> Unit,
     onQueue: () -> Unit,
 ) {
@@ -1471,6 +1473,13 @@ fun PlayerConnectRow(
                         indication = null,
                         onLongClick = { nerd = true },
                     ) { quality = true },
+                )
+                if (!lyricsSource.isNullOrBlank() && com.music.spotui.data.preferences.PlayerSourceLinePref.shown) Text(
+                    text = stringResource(R.string.player_lyrics_source, lyricsSource),
+                    color = com.music.spotui.ui.theme.AppMuted,
+                    fontSize = 11.sp,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 )
             }
         }

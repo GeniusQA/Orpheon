@@ -618,8 +618,14 @@ private fun RowScope.PlayerCredits(
     // a moment after the song starts), so its arrival fades in below the title and artist
     // instead of moving them.
     val sourceLabel = com.music.spotui.ui.components.playingSourceLabel()
+    val lyricsState = com.music.spotui.ui.screens.rememberLyricsState(
+        androidx.lifecycle.viewmodel.compose.viewModel<com.music.spotui.ui.viewmodel.LyricsViewModel>(),
+        state.title, state.artist)
+    val lyricsSource = com.music.spotui.ui.components.matchedLyricsSource(lyricsState)
+    val lyricsTag = lyricsSource?.let { stringResource(R.string.player_lyrics_source, it) }.orEmpty()
+    val sourceLine = listOf(sourceLabel, lyricsTag).filter { it.isNotBlank() }.joinToString(" · ")
     val sourceShown = com.music.spotui.data.preferences.PlayerSourceLinePref.shown
-    val hasSource = sourceLabel.isNotBlank() && !state.adPlaying
+    val hasSource = sourceLine.isNotBlank() && !state.adPlaying
     // Its room is kept only where a source line can come (an audio-source extension, the app's own
     // player): with none, the title and artist sat high over an empty line (reported).
     val sourceRoom = hasSource || com.music.spotui.extensions.Extensions.hasAudioSource() || com.music.spotui.di.LocalPlayer.active.value
@@ -688,7 +694,7 @@ private fun RowScope.PlayerCredits(
         // What the sound is when Myspoti's own player plays it (an extension's stream, a
         // download); a tap opens what plays and its quality. Same state as the Classic player.
         if (!state.adPlaying && sourceShown && sourceRoom) Text(
-            text = sourceLabel.ifEmpty { " " },
+            text = sourceLine.ifEmpty { " " },
             style = Immersive.Caption.copy(lineHeight = 14.sp),
             color = tint.copy(alpha = 0.45f),
             maxLines = 1,
