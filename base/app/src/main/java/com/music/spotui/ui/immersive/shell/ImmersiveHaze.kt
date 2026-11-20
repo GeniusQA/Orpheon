@@ -20,10 +20,12 @@ import com.music.spotui.ui.immersive.Immersive
 import com.music.spotui.ui.immersive.shell.backdrop.backdrops.LayerBackdrop
 import com.music.spotui.ui.immersive.shell.backdrop.backdrops.layerBackdrop
 import dev.chrisbanes.haze.ExperimentalHazeApi
-import dev.chrisbanes.haze.HazeInputScale
+import dev.chrisbanes.haze.HazeInput
+import dev.chrisbanes.haze.HazePerformanceMode
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.blur.HazeBlurStyle
+import dev.chrisbanes.haze.blur.HazeColorEffect
+import dev.chrisbanes.haze.blur.hazeBlur
 import dev.chrisbanes.haze.hazeSource
 
 /**
@@ -94,13 +96,16 @@ internal fun Modifier.immersiveFrost(
 }
 
 @OptIn(ExperimentalHazeApi::class)
-private fun Modifier.hazeFrost(state: HazeState, tint: Color, blur: Float): Modifier = hazeEffect(state) {
-    inputScale = HazeInputScale.Fixed(0.33f)
-    backgroundColor = Immersive.Page
-    tints = listOf(HazeTint(tint))
-    blurRadius = blur.dp
-    noiseFactor = 0f
-}
+private fun Modifier.hazeFrost(state: HazeState, tint: Color, blur: Float): Modifier = hazeBlur(
+    input = HazeInput.Sources(state),
+    style = HazeBlurStyle {
+        backgroundColor(Immersive.Page)
+        colorEffects(listOf(HazeColorEffect.tint(tint)))
+        blurRadius(blur.dp)
+        noiseFactor(0f)
+    },
+    performanceMode = HazePerformanceMode.Fixed(0.33f),
+)
 
 /**
  * The glass of the floating bars: [shape]-clipped frost over the page when one is provided,
