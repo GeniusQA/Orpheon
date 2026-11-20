@@ -46,6 +46,7 @@ import app.myspoti.host.android.Logbook
 import app.myspoti.host.android.MyspotiRuntime
 import com.music.spotui.data.entity.Lyrics
 import com.music.spotui.di.SongPlayer
+import com.music.spotui.ui.components.UserNotices
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -1152,6 +1153,9 @@ object Extensions {
     /** Logs [o] of [id]'s [hook] call; sets the source aside or asks for a sign-in when it says so. */
     private fun noted(id: String, hook: Hook, o: Outcome, ms: Long) {
         log(id, "${hook.key}: ${o.describe()} ($ms ms)")
+        val name = _registry.value.find(id)?.name ?: id
+        val state = if (o is Outcome.Found) "成功" else "失败"
+        UserNotices.post("$name ${hook.key} $state：${o.describe()}", long = o !is Outcome.Found)
         cooldown.note(id, o)?.let { log(id, "set aside for ${it / 1000} s (${o.key}): not asked meanwhile") }
         when (o) {
             is Outcome.SignIn -> signInNeeded(id, o.detail)
@@ -1165,9 +1169,7 @@ object Extensions {
         _signIns.value = _signIns.value + (id to detail.orEmpty())
         if (!first) return
         val name = _registry.value.find(id)?.name ?: id
-        main.post {
-            android.widget.Toast.makeText(ctx, ctx.getString(app.myspoti.engine.R.string.extension_sign_in_needed, name), android.widget.Toast.LENGTH_LONG).show()
-        }
+        UserNotices.post(ctx.getString(app.myspoti.engine.R.string.extension_sign_in_needed, name), long = true)
     }
 
     // ── Whether each extension's source answers: the `status` hook ──

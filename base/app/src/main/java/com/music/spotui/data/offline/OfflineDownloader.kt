@@ -6,6 +6,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateMap
 import com.music.spotui.data.entity.SongsModel
 import com.music.spotui.data.preferences.isDownloadsEnabled
 import com.music.spotui.di.Graph
+import com.music.spotui.ui.components.UserNotices
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -288,7 +289,17 @@ object OfflineDownloader {
                 OfflineStatus.Failed
             }
             synchronized(pending) { pending.remove(r.trackId); savePending() }
-            if (outcome != null) setStatus(r.trackId, outcome, by)
+            if (outcome == null) {
+                UserNotices.post("已下载：${r.title}")
+            } else {
+                val reason = when (outcome) {
+                    OfflineStatus.Unavailable -> "未找到匹配的录音"
+                    OfflineStatus.Failed -> if (by.isEmpty()) "下载失败" else "${by.joinToString()} 无响应"
+                    else -> outcome.toString()
+                }
+                UserNotices.post("下载失败：${r.title}，$reason", long = true)
+                setStatus(r.trackId, outcome, by)
+            }
         }
         running[r.trackId] = job
         job.join()
