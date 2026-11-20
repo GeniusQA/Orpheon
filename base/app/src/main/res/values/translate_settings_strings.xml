@@ -1,0 +1,5 @@
+<resources>
+    <string name="lyrics_google_translate_title">Use Google Translate fallback</string>
+    <string name="lyrics_google_translate_detail">When no lyrics source provides a translation, translate the lyrics with Google. Off: show a notice instead.</string>
+    <string name="lyrics_translation_no_google_fallback">No lyrics source provided a translation, and Google Translate fallback is off.</string>
+</resources>

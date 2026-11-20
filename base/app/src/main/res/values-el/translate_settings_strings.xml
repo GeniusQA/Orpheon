@@ -1,0 +1,5 @@
+<resources>
+    <string name="lyrics_google_translate_title">Χρήση μετάφρασης Google</string>
+    <string name="lyrics_google_translate_detail">Όταν καμία πηγή δεν παρέχει μετάφραση, μετάφραση μέσω Google. Αν είναι κλειστό, εμφανίζεται ειδοποίηση.</string>
+    <string name="lyrics_translation_no_google_fallback">Καμία πηγή στίχων δεν παρείχε μετάφραση και η εφεδρική μετάφραση Google είναι κλειστή.</string>
+</resources>

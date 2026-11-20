@@ -1,0 +1,5 @@
+<resources>
+    <string name="lyrics_google_translate_title">Usa Google Traduttore come fallback</string>
+    <string name="lyrics_google_translate_detail">Quando nessuna fonte fornisce una traduzione, traduci con Google. Se disattivato, mostra un avviso.</string>
+    <string name="lyrics_translation_no_google_fallback">Nessuna fonte di testi ha fornito una traduzione e il fallback di Google Traduttore è disattivato.</string>
+</resources>

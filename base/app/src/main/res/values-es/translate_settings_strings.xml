@@ -1,0 +1,5 @@
+<resources>
+    <string name="lyrics_google_translate_title">Usar Google Translate como respaldo</string>
+    <string name="lyrics_google_translate_detail">Cuando ninguna fuente aporta traducción, traducir con Google. Si está desactivado, se muestra un aviso.</string>
+    <string name="lyrics_translation_no_google_fallback">Ninguna fuente de letras proporcionó una traducción y el respaldo de Google Translate está desactivado.</string>
+</resources>

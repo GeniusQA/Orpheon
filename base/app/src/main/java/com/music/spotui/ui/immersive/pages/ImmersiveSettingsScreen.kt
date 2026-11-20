@@ -458,6 +458,7 @@ private fun LibraryPage(navController: NavController, back: () -> Unit) {
 private fun LyricsPage(open: (SettingsPage) -> Unit, back: () -> Unit) {
     val ctx = LocalContext.current
     var wordSync by remember { mutableStateOf(com.music.spotui.data.preferences.isLyricsWordSync(ctx)) }
+    var googleTranslate by remember { mutableStateOf(com.music.spotui.data.preferences.GoogleTranslatePref.on) }
     ImmersivePage(title = stringResource(R.string.settings_section_lyrics), onBack = back) {
         immersiveGroup("lyrics") {
             // Lyrics: word by word (karaoke) first, or line by line with Spotify's first.
@@ -509,6 +510,17 @@ private fun LyricsPage(open: (SettingsPage) -> Unit, back: () -> Unit) {
                 )
             }
             row {
+                ImmersiveSwitchRow(
+                    stringResource(R.string.lyrics_google_translate_title),
+                    checked = googleTranslate,
+                    onChecked = {
+                        googleTranslate = it
+                        com.music.spotui.data.preferences.GoogleTranslatePref.set(ctx, it)
+                    },
+                    detail = stringResource(R.string.lyrics_google_translate_detail),
+                )
+            }
+            if (googleTranslate) row {
                 val translateTo = com.music.spotui.data.preferences.getLyricTranslateLang(ctx)
                 ImmersiveGroupRow(
                     stringResource(R.string.lyrics_translation_title), detail = stringResource(R.string.lyrics_translation_detail),

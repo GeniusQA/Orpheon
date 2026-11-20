@@ -292,6 +292,18 @@ fun applyCrossfade(seconds: Int) {
     runtime.spotify.player.crossfadeSeconds = if (com.music.spotui.automix.AutoMix.on) TransitionPref.SPOTIFY_FADE_SECONDS else seconds
 }
 
+/** Google Translate fills in when no lyrics source provides a translation. On by default. */
+object GoogleTranslatePref {
+    private const val KEY = "lyrics_google_translate"
+    var on by androidx.compose.runtime.mutableStateOf(prefs(com.music.spotui.di.Graph.app).getBoolean(KEY, true))
+        private set
+
+    fun set(c: Context, value: Boolean) {
+        on = value
+        prefs(c).edit().putBoolean(KEY, value).apply()
+    }
+}
+
 fun getLyricTranslateLang(c: Context): String =
     prefs(c).getString(KEY_LYRIC_TRANSLATE_LANG, "").orEmpty()
 

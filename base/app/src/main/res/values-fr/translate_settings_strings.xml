@@ -1,0 +1,5 @@
+<resources>
+    <string name="lyrics_google_translate_title">Utiliser Google Traduction</string>
+    <string name="lyrics_google_translate_detail">Quand aucune source ne fournit de traduction, traduire avec Google. Désactivé : afficher une notification.</string>
+    <string name="lyrics_translation_no_google_fallback">Aucune source de paroles n’a fourni de traduction et le secours Google Traduction est désactivé.</string>
+</resources>

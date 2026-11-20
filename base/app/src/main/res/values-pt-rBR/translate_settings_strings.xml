@@ -1,0 +1,5 @@
+<resources>
+    <string name="lyrics_google_translate_title">Usar o Google Tradutor como alternativa</string>
+    <string name="lyrics_google_translate_detail">Quando nenhuma fonte fornecer tradução, traduzir com o Google. Desativado: mostrar um aviso.</string>
+    <string name="lyrics_translation_no_google_fallback">Nenhuma fonte de letras forneceu tradução e a alternativa do Google Tradutor está desativada.</string>
+</resources>

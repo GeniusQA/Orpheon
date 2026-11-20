@@ -1,0 +1,5 @@
+<resources>
+    <string name="lyrics_google_translate_title">启用谷歌翻译兜底</string>
+    <string name="lyrics_google_translate_detail">当所有歌词来源都没有译文时，使用谷歌翻译。关闭后不请求谷歌翻译。</string>
+    <string name="lyrics_translation_no_google_fallback">所有歌词来源都没有提供译文，且已关闭谷歌翻译兜底。</string>
+</resources>

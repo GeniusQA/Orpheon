@@ -1,0 +1,5 @@
+<resources>
+    <string name="lyrics_google_translate_title">Использовать Google Translate</string>
+    <string name="lyrics_google_translate_detail">Если ни один источник не дал перевода, перевести текст через Google. Если выключено — показать уведомление.</string>
+    <string name="lyrics_translation_no_google_fallback">Ни один источник не предоставил перевод, а резервный Google Translate выключен.</string>
+</resources>

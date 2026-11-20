@@ -202,10 +202,11 @@ class LyricsViewModel constructor() : ViewModel() {
         )
         viewModelScope.launch(Dispatchers.IO) {
             val lines = cur.lyrics.lines.map { it.text }
-            // The lyrics' own translation (from the source, in this language) first; the machine only fills what it lacks.
+            val googleFallback = com.music.spotui.data.preferences.GoogleTranslatePref.on
+            // The lyrics' own translation (from the source, in this language) first; Google only fills what it lacks.
             cur.lyrics.translationsFor(targetLang)?.let { own ->
                 val missing = lines.indices.filter { own[it] == null && lines[it].isNotBlank() && lines[it].trim() != "♪" }
-                val filled: Map<Int, String> = if (missing.isEmpty()) emptyMap()
+                val filled: Map<Int, String> = if (missing.isEmpty() || !googleFallback) emptyMap()
                 else LyricTranslate.translateLines(missing.map { lines[it] }, targetLang)?.lines?.let { missing.zip(it).toMap() } ?: emptyMap()
                 withContext(Dispatchers.Main) {
                     val latest = _state.value as? State.Loaded ?: return@withContext
@@ -221,6 +222,25 @@ class LyricsViewModel constructor() : ViewModel() {
                     )
                 }
                 return@launch
+            }
+            if (!googleFallback) {
+                val detected = cur.sourceLanguage
+                if (detected == null || !sameLanguage(detected, targetLang)) {
+                    withContext(Dispatchers.Main) {
+                        val latest = _state.value as? State.Loaded ?: return@withContext
+                        if (latest.lyrics == cur.lyrics) _state.value = latest.copy(
+                            translating = false,
+                            translationChecked = true,
+                            showTranslation = false,
+                            translationRequested = false,
+                        )
+                        if (showWhenDone) com.music.spotui.ui.components.UserNotices.post(
+                            com.music.spotui.di.Graph.app.getString(app.myspoti.engine.R.string.lyrics_translation_no_google_fallback),
+                            long = true,
+                        )
+                    }
+                    return@launch
+                }
             }
             val detectedLanguage = cur.sourceLanguage
                 ?: LyricTranslate.detectLanguage(lines, targetLang)

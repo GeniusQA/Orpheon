@@ -288,6 +288,7 @@ fun SettingsScreen(navController: NavController) {
             // Lyrics: word by word (karaoke) first, or line by line with Spotify's first.
             Section(R.string.settings_section_lyrics)
             var wordSync by remember { mutableStateOf(com.music.spotui.data.preferences.isLyricsWordSync(ctx)) }
+            var googleTranslate by remember { mutableStateOf(com.music.spotui.data.preferences.GoogleTranslatePref.on) }
             OptionRow(
                 label = stringResource(R.string.lyrics_word_sync_title),
                 detail = stringResource(if (wordSync) R.string.lyrics_word_sync_on else R.string.lyrics_word_sync_off),
@@ -321,7 +322,16 @@ fun SettingsScreen(navController: NavController) {
                 checked = com.music.spotui.data.preferences.LyricsRomanizationPref.on,
                 onChecked = { com.music.spotui.data.preferences.LyricsRomanizationPref.set(ctx, it) },
             )
-            LyricsTranslationRow()
+            OptionRow(
+                label = stringResource(R.string.lyrics_google_translate_title),
+                detail = stringResource(R.string.lyrics_google_translate_detail),
+                checked = googleTranslate,
+                onChecked = {
+                    googleTranslate = it
+                    com.music.spotui.data.preferences.GoogleTranslatePref.set(ctx, it)
+                },
+            )
+            if (googleTranslate) LyricsTranslationRow()
             }
             if (tab == TAB_DOWNLOADS) {
             Section(R.string.settings_section_downloads)

@@ -1,0 +1,5 @@
+<resources>
+    <string name="lyrics_google_translate_title">Użyj Google Translate jako zapasowego</string>
+    <string name="lyrics_google_translate_detail">Gdy żadne źródło nie poda tłumaczenia, przetłumacz tekst przez Google. Wyłączone: pokaż powiadomienie.</string>
+    <string name="lyrics_translation_no_google_fallback">Żadne źródło tekstu nie podało tłumaczenia, a zapasowe Google Translate jest wyłączone.</string>
+</resources>

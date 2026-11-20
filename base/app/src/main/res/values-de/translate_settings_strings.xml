@@ -1,0 +1,5 @@
+<resources>
+    <string name="lyrics_google_translate_title">Google-Übersetzung als Ersatz</string>
+    <string name="lyrics_google_translate_detail">Wenn keine Quelle eine Übersetzung liefert, den Text mit Google übersetzen. Aus: stattdessen eine Meldung anzeigen.</string>
+    <string name="lyrics_translation_no_google_fallback">Keine Lyrics-Quelle hat eine Übersetzung geliefert und die Google-Übersetzung ist deaktiviert.</string>
+</resources>
