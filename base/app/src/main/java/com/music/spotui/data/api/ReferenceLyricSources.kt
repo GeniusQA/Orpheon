@@ -44,6 +44,7 @@ internal object ReferenceLyricSources {
         .build()
 
     suspend fun fetch(sourceId: String, track: LyricsApi.Track): Lyrics? = withContext(Dispatchers.IO) {
+        app.myspoti.host.android.Logbook.log("lyrics source $sourceId asked for ${track.title}")
         when (sourceId) {
             "amll" -> amll(track)
             "lunabeat" -> lunabeat(track)
@@ -307,12 +308,18 @@ internal object ReferenceLyricSources {
     private const val QQ_3DES_KEY = "!@#)(*$%123ZXC!@!@#)(NHL"
 
     private fun qqMusic(track: LyricsApi.Track): Lyrics? {
-        val candidates = qqSearch(track) ?: qqCatalog(track)
-        val song = candidates?.takeIf { it.length() > 0 }?.optJSONObject(0) ?: return null
+        val search = qqSearch(track)
+        val candidates = if (search != null && search.length() > 0) search else qqCatalog(track)
+        val song = pickBest(candidates, track)
+        if (song == null) {
+            app.myspoti.host.android.Logbook.log("QQ lyrics: no candidate for ${track.title}")
+            return null
+        }
         val id = song.optLong("id").takeIf { it > 0 } ?: return null
         val title = song.optString("title").ifBlank { track.title }
         val artist = song.optString("artist").ifBlank { track.artist }
         val album = song.optString("album")
+        app.myspoti.host.android.Logbook.log("QQ lyrics: candidate=$title / $artist id=$id")
         val body = qqBody("music.musichallSong.PlayLyricInfo", "GetPlayLyricInfo", JSONObject()
             .put("songID", id)
             .put("songName", b64(title)).put("albumName", b64(album)).put("singerName", b64(artist))
@@ -323,14 +330,21 @@ internal object ReferenceLyricSources {
         val data = runCatching {
             val root = JSONObject(postJson(QQ_URL, body.toString(), qqHeaders()) ?: return null)
             val module = root.getJSONObject("req_0")
-            if (module.optInt("code") != 0) return null
+            val code = module.optInt("code")
+            if (code != 0) {
+                app.myspoti.host.android.Logbook.log("QQ lyrics: GetPlayLyricInfo code=$code")
+                return null
+            }
             module.optJSONObject("data")
         }.getOrNull() ?: return null
         val originalText = qqDecrypt(data.optString("lyric"))
         val translatedText = qqDecrypt(data.optString("trans"))
         val romaText = qqDecrypt(data.optString("roma"))
-        val parsed = parseQrcSet(originalText, translatedText, romaText) ?: return null
-        return toLyrics("QQ Music", parsed, "zh")
+        val parsed = parseQrcSet(originalText, translatedText, romaText)
+        app.myspoti.host.android.Logbook.log(
+            "QQ lyrics: original=${parsed?.original?.size ?: 0} translated=${parsed?.translated?.size ?: 0} roma=${parsed?.romanized?.size ?: 0}")
+        val lyrics = toLyrics("QQ Music", parsed ?: return null, "zh") ?: return null
+        return lyrics.copy(language = guessLanguage(parsed.original.joinToString(" ") { it.text }))
     }
 
     private fun qqSearch(track: LyricsApi.Track): JSONArray? {
@@ -363,7 +377,7 @@ internal object ReferenceLyricSources {
     }
 
     private fun qqCatalog(track: LyricsApi.Track): JSONArray? {
-        val artists = track.artist.split(",").map { it.trim() }.filter { it.isNotBlank() }
+        val artists = track.artist.split(Regex("""[,/&]+""")).map { it.trim() }.filter { it.isNotBlank() }
         val titles = listOf(track.title, cleanTitle(track.title)).distinct()
         for (title in titles) for (artist in artists.ifEmpty { listOf("") }) {
             val body = qqBody("music.musichallSong.PlayLyricInfo", "GetPlayLyricInfo", JSONObject()
@@ -654,27 +668,28 @@ internal object ReferenceLyricSources {
         if (text.isBlank()) return emptyList()
         val body = qrcXmlRegex.find(text)?.groupValues?.get(1)?.xmlUnescape() ?: text
         return body.lineSequence().mapNotNull { raw ->
-            val m = qrcLineRegex.matchEntire(raw.trim()) ?: return@mapNotNull null
+            val line = raw.trim()
+            if (line.isEmpty() || line.matches(Regex("""^\[\w+:[^]]*]$"""))) return@mapNotNull null
+            val m = qrcLineRegex.matchEntire(line) ?: return@mapNotNull null
             val start = m.groupValues[1].toLongOrNull() ?: return@mapNotNull null
             val duration = m.groupValues[2].toLongOrNull() ?: return@mapNotNull null
             val end = start + duration
             val content = m.groupValues[3]
             val words = mutableListOf<LyricWord>()
-            var cursor = 0L
+            var lastWordEnd = start
+            var cursor = 0
             qrcWordRegex.findAll(content).forEach { w ->
-                val off = w.groupValues[1].toLongOrNull() ?: return@forEach
-                val len = w.groupValues[2].toLongOrNull() ?: return@forEach
-                val textPart = w.groupValues[3]
-                if (off > cursor && cursor.toInt() < content.length) {
-                    val from = cursor.toInt().coerceAtMost(content.length)
-                    val to = off.toInt().coerceAtMost(content.length)
-                    if (to > from) words += LyricWord(start + cursor, start + off, content.substring(from, to))
-                }
-                words += LyricWord(start + off, start + off + len, textPart)
-                cursor = off + len
+                val wordStart = w.groupValues[1].toLongOrNull() ?: return@forEach
+                val wordEnd = wordStart + (w.groupValues[2].toLongOrNull() ?: 0L)
+                val pre = content.substring(cursor, w.range.first.coerceAtMost(content.length))
+                if (pre.isNotBlank()) words += LyricWord(lastWordEnd, wordStart, pre.trimStart())
+                words += LyricWord(wordStart, wordEnd, w.groupValues[3])
+                lastWordEnd = wordEnd
+                cursor = w.range.last + 1
             }
-            if (cursor < duration && cursor.toInt() < content.length) words += LyricWord(start + cursor, end, content.substring(cursor.toInt()))
-            if (words.isEmpty()) words += LyricWord(start, end, content)
+            val rest = content.substring(cursor.coerceAtMost(content.length))
+            if (rest.isNotBlank()) words += LyricWord(lastWordEnd, end, rest.trim())
+            if (words.isEmpty()) words += LyricWord(start, end, content.trim())
             LyricLine(start, words.joinToString("") { it.text }.trim(), words.sortedBy { it.startMs })
         }.sortedBy { it.timeMs }.toList()
     }
@@ -815,6 +830,26 @@ internal object ReferenceLyricSources {
     private fun enc(value: String): String = URLEncoder.encode(value, "UTF-8")
     private fun b64(value: String): String = Base64.getEncoder().encodeToString(value.toByteArray(StandardCharsets.UTF_8))
     private fun cleanTitle(title: String): String = title.replace(Regex("""\s*[（(][^)）]*[)）]\s*"""), " ").trim().ifEmpty { title.trim() }
+    private fun pickBest(candidates: JSONArray?, track: LyricsApi.Track): JSONObject? {
+        if (candidates == null || candidates.length() == 0) return null
+        var best: JSONObject? = null
+        var bestScore = Int.MIN_VALUE
+        for (i in 0 until candidates.length()) {
+            val item = candidates.optJSONObject(i) ?: continue
+            val value = score(
+                item.optString("title"), item.optString("artist"), item.optLong("durationMs"),
+                track.title, track.artist, track.durationMs,
+            )
+            if (value > bestScore) { best = item; bestScore = value }
+        }
+        return best?.takeIf { bestScore > 0 }
+    }
+    private fun guessLanguage(lyrics: String): String? {
+        val letters = lyrics.filter { it.isLetter() }
+        if (letters.isEmpty()) return null
+        val cjk = letters.count { it.code in 0x4E00..0x9FFF || it.code in 0x3040..0x30FF || it.code in 0xAC00..0xD7AF }
+        return if (cjk.toFloat() / letters.size > 0.15f) "zh" else "en"
+    }
     private fun score(name: String, by: String, ms: Long, title: String, artist: String, durationMs: Long): Int {
         val n = norm(name); val t = norm(title); val a = norm(by); val ar = norm(artist)
         var s = 0

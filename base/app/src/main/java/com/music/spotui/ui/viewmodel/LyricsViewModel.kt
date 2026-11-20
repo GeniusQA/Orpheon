@@ -175,7 +175,8 @@ class LyricsViewModel constructor() : ViewModel() {
     private fun loadedState(lyrics: com.music.spotui.data.entity.Lyrics) = State.Loaded(
         lyrics = lyrics,
         sourceLanguage = lyrics.language,
-        translationChecked = lyrics.language != null,
+        translationChecked = lyrics.language != null ||
+            (lyrics.translationLanguage != null && lyrics.lines.any { !it.translation.isNullOrBlank() }),
     )
 
     fun toggleTranslation(targetLang: String) {
