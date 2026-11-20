@@ -534,6 +534,10 @@ object LyricsApi {
     private suspend fun <T> within(ms: Long, block: () -> T?): T? =
         kotlinx.coroutines.withTimeoutOrNull(ms) { scope.async { block() }.await() }
 
+    /** [within] for sources whose client is itself a suspend call. */
+    private suspend fun <T> withinSuspend(ms: Long, block: suspend () -> T?): T? =
+        kotlinx.coroutines.withTimeoutOrNull(ms) { block() }
+
     /**
      * [to] with the backing vocals (and the singers) of the first of [asked] that has them, put on
      * the same lines, when [to] has none: Spotify never times them apart, LyricsPlus and lrc.red
@@ -568,7 +572,7 @@ object LyricsApi {
         // Hand-timed syllable by syllable by its community (CC0), found by the song's Spotify id.
         val amll = async { if (sourceEnabled("amll")) within(WORD_WAIT_MS) { asking("amll", track) { fromAmll(track.trackId) } } else null }
         val netease = async { if (sourceEnabled("netease")) within(WORD_WAIT_MS) { asking("netease", track) { fromNetEaseWords(title, artist, durationMs) } } else null }
-        val qq = async { if (sourceEnabled("qqmusic")) within(WORD_WAIT_MS) { askingSuspend("qqmusic", track) { LyricsPlatformSources.fromQQMusic(title, artist, durationMs) } } else null }
+        val qq = async { if (sourceEnabled("qqmusic")) withinSuspend(WORD_WAIT_MS) { askingSuspend("qqmusic", track) { LyricsPlatformSources.fromQQMusic(title, artist, durationMs) } } else null }
         val sp = spotify.await()
         // Shown at once while the word timings or the backing vocals are looked for (reported: lyrics slow to come).
         if (sp != null) showEarly(track, sp)
