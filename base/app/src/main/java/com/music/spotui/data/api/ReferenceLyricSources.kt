@@ -84,18 +84,21 @@ internal object ReferenceLyricSources {
     private var lunaCheckedAt = 0L
     private val lunaTtmlCache = HashMap<String, String>()
 
-    private fun lunabeat(track: LyricsApi.Track): Lyrics? {
-        val appleId = itunesId(track) ?: return null
+    private suspend fun lunabeat(track: LyricsApi.Track): Lyrics? {
+        val wanted = lunaIds(track)
+        if (wanted.isEmpty()) return null
         val index = lunaIndex(force = false) ?: return null
         val songs = index.optJSONArray("songs") ?: return null
         var entry: JSONObject? = null
         for (i in 0 until songs.length()) {
             val song = songs.optJSONObject(i) ?: continue
-            val ids = song.optJSONObject("sourceIds")?.optJSONArray("appleMusicId") ?: continue
-            for (j in 0 until ids.length()) {
-                if (ids.optString(j).trim() == appleId) { entry = song; break }
+            val ids = song.optJSONObject("sourceIds") ?: continue
+            val matched = ids.keys().asSequence().any { key ->
+                val values = ids.optJSONArray(key)?.let { arr -> (0 until arr.length()).map { arr.optString(it) } }
+                    ?: listOf(ids.optString(key))
+                values.any { it.trim().isNotEmpty() && it.trim() in wanted }
             }
-            if (entry != null) break
+            if (matched) { entry = song; break }
         }
         val path = entry?.optString("path").orEmpty().trimStart('/')
         val expectedSha = entry?.optString("sha256").orEmpty()
@@ -141,22 +144,59 @@ internal object ReferenceLyricSources {
         return index
     }
 
-    private fun itunesId(track: LyricsApi.Track): String? {
+    /** Spotify has no id in the TTML Hub index: map it to the ids the hub does carry. */
+    private suspend fun lunaIds(track: LyricsApi.Track): Set<String> {
+        val ids = LinkedHashSet<String>()
+        if (track.trackId.isNotBlank()) runCatching {
+            app.myspoti.host.android.MyspotiRuntime.api.isrc(android.net.Uri.parse("spotify:track:${track.trackId}"))
+        }.getOrNull()?.trim()?.takeIf { it.isNotEmpty() }?.let { isrc ->
+            ids += isrc.uppercase(Locale.ROOT)
+            ids += isrc.lowercase(Locale.ROOT)
+        }
+        ids += itunesIds(track)
+        runCatching { qqSearch(track) }.getOrNull()?.let { candidates ->
+            for (i in 0 until candidates.length()) {
+                val song = candidates.optJSONObject(i) ?: continue
+                song.optString("mid").trim().takeIf { it.isNotEmpty() }?.let { ids += it }
+            }
+        }
+        runCatching { neteaseSearchIds(track) }.getOrNull()?.let { ids += it }
+        return ids
+    }
+
+    private fun itunesIds(track: LyricsApi.Track): Set<String> {
         val term = URLEncoder.encode("${track.title} ${track.artist}", "UTF-8")
         val json = text("https://itunes.apple.com/search?term=$term&media=music&entity=song&limit=10&country=us")
-            ?: return null
-        val results = runCatching { JSONObject(json).optJSONArray("results") }.getOrNull() ?: return null
-        var fallback: String? = null
+            ?: return emptySet()
+        val results = runCatching { JSONObject(json).optJSONArray("results") }.getOrNull() ?: return emptySet()
+        val close = LinkedHashSet<String>()
+        val loose = LinkedHashSet<String>()
         for (i in 0 until results.length()) {
             val item = results.optJSONObject(i) ?: continue
             val id = item.optLong("trackId").takeIf { it > 0 }?.toString() ?: continue
             val title = item.optString("trackName")
             val artist = item.optString("artistName")
             val duration = item.optLong("trackTimeMillis")
-            if (LyricsApi.sameSong(title, artist, duration, track.title, track.artist, track.durationMs)) return id
-            if (fallback == null && (title.contains(track.title, true) || track.title.contains(title, true))) fallback = id
+            if (LyricsApi.sameSong(title, artist, duration, track.title, track.artist, track.durationMs)) close += id
+            else if (title.contains(track.title, true) || track.title.contains(title, true)) loose += id
         }
-        return fallback
+        return close + loose
+    }
+
+    /** NetEase ids for the same metadata, used both by its own source and by the TTML Hub lookup. */
+    private fun neteaseSearchIds(track: LyricsApi.Track): Set<String> {
+        synchronized(neLock) { ensureNeLogin() }
+        val search = neRequest("/eapi/search/song/list/page", JSONObject()
+            .put("limit", "20").put("offset", "0")
+            .put("keyword", "${track.title} ${track.artist}".trim())
+            .put("scene", "NORMAL").put("needCorrect", "true")) ?: return emptySet()
+        val resources = runCatching { JSONObject(search).optJSONObject("data")?.optJSONArray("resources") }.getOrNull() ?: return emptySet()
+        val ids = LinkedHashSet<String>()
+        for (i in 0 until resources.length()) {
+            resources.optJSONObject(i)?.optJSONObject("baseInfo")?.optJSONObject("simpleSongData")?.optLong("id")
+                ?.takeIf { it > 0 }?.let { ids += it.toString() }
+        }
+        return ids
     }
 
     // ─────────────────────────── NetEase eapi ───────────────────────────
@@ -367,6 +407,7 @@ internal object ReferenceLyricSources {
                 }.orEmpty()
                 out.put(JSONObject()
                     .put("id", item.optLong("id"))
+                    .put("mid", item.optString("mid"))
                     .put("title", item.optString("title"))
                     .put("artist", artist)
                     .put("album", item.optJSONObject("album")?.optString("name").orEmpty())
