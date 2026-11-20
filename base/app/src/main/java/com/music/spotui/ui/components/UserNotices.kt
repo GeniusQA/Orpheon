@@ -24,8 +24,8 @@ object UserNotices {
         lastText = text
         lastAt = now
         main.post {
-            if (!Graph::app.isInitialized) return@post
-            Toast.makeText(Graph.app, text, if (long) Toast.LENGTH_LONG else Toast.LENGTH_SHORT).show()
+            val app = runCatching { Graph.app }.getOrNull() ?: return@post
+            Toast.makeText(app, text, if (long) Toast.LENGTH_LONG else Toast.LENGTH_SHORT).show()
         }
     }
 }
