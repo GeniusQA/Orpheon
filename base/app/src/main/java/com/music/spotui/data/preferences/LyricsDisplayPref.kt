@@ -1,7 +1,9 @@
 package com.music.spotui.data.preferences
 
 import android.content.Context
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 
 private const val LYRICS_PREF = "lyrics_display"
 private const val KEY_FONT_SCALE = "font_scale"

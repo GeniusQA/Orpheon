@@ -198,7 +198,7 @@ private fun ProgressTools(onBack: () -> Unit) {
     ToolPage(stringResource(R.string.lyrics_tools_progress), stringResource(R.string.lyrics_tools_progress_detail), onBack) {
         val seconds = offset / 1000f
         Text(
-            text = "${if (seconds > 0) "+" else ""}${String.format(Locale.ROOT, "%.1f", seconds)} s",
+            text = "${if (seconds > 0f) "+" else ""}${String.format(Locale.ROOT, "%.1f", seconds)} s",
             style = Immersive.Headline,
             modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp),
             textAlign = TextAlign.Center,
@@ -224,7 +224,7 @@ private fun FontTools(onBack: () -> Unit) {
         )
         ThinSlider(
             value = (scale - 0.7f) / 1.1f,
-            onValueChange = { LyricsFontScalePref.set(context, 0.7f + it * 1.1f) },
+            onValueChange = { value -> LyricsFontScalePref.set(context, 0.7f + value * 1.1f) },
             modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
         )
         Text(
@@ -261,7 +261,7 @@ private fun ColorTools(onBack: () -> Unit) {
             colors.forEach { color ->
                 Box(
                     Modifier.size(38.dp).background(if (color == null) Immersive.Raised else color)
-                        .clickable { LyricsColorPref.set(context, color?.toArgb()) },
+                        .clickable { LyricsColorPref.set(context, color?.value?.toInt()) },
                     contentAlignment = Alignment.Center,
                 ) {
                     if (selected == color) {
@@ -289,7 +289,7 @@ private fun ColorSlider(label: String, value: Float, color: (Float) -> Color) {
     Text(label, style = Immersive.Caption, modifier = Modifier.padding(top = 8.dp))
     ThinSlider(
         value = value,
-        onValueChange = { LyricsColorPref.set(context, color(it).toArgb()) },
+        onValueChange = { value -> LyricsColorPref.set(context, color(value).value.toInt()) },
         modifier = Modifier.fillMaxWidth(),
     )
 }

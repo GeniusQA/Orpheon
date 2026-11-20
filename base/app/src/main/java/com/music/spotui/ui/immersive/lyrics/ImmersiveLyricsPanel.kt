@@ -36,7 +36,6 @@ import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.calculateTopPadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -315,9 +314,11 @@ private fun lyricFace(base: TextStyle, scale: Float = LyricsFontScalePref.value)
     base.copy(fontSize = base.fontSize * scale, lineHeight = base.lineHeight * scale)
 
 /** The active shade is the chosen colour; the other lines stay readable but quieter. */
-private fun lyricsTextColor(active: Boolean): Color = LyricsColorPref.value?.let { argb ->
-    Color(argb).copy(alpha = if (active) 1f else 0.72f)
-} ?: if (active) Color.White else Immersive.TextSecondary
+private fun lyricsTextColor(active: Boolean): Color {
+    val argb: Int? = LyricsColorPref.value
+    return if (argb != null) Color(argb).copy(alpha = if (active) 1f else 0.72f)
+    else if (active) Color.White else Immersive.TextSecondary
+}
 
 /** A round toggle over the lyrics, lit white while what it shows is on; a spinner while that is fetched. */
 @Composable

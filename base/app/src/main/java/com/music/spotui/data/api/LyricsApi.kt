@@ -5,7 +5,10 @@ import com.music.spotui.data.entity.LyricLine
 import com.music.spotui.data.entity.LyricWord
 import com.music.spotui.data.entity.Lyrics
 import com.music.spotui.data.entity.LyricsColors
+import com.music.spotui.data.preferences.LyricsSourcePref
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
