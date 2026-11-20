@@ -98,7 +98,9 @@ internal fun LyricsSourcesPage(back: () -> Unit) {
                         .background(Immersive.Raised, RoundedCornerShape(14.dp))
                         .toggleable(on, role = Role.Switch) {
                             if (!it && enabled.values.count { v -> v } <= 1) return@toggleable
-                            LyricsSourcePref.setEnabled(ctx, id, it)
+                            if (id == "genius")
+                                com.music.spotui.data.preferences.GeniusPref.set(ctx, it)
+                            else LyricsSourcePref.setEnabled(ctx, id, it)
                             enabled = enabled.toMutableMap().also { m -> m[id] = it }
                             LyricsApi.forgetAll()
                         }
@@ -112,11 +114,17 @@ internal fun LyricsSourcesPage(back: () -> Unit) {
                         modifier = Modifier.widthIn(min = 22.dp),
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text(
-                        LyricsSourcePref.NAMES[id] ?: id,
-                        style = Immersive.Body.copy(color = if (on) Immersive.Text else Immersive.TextTertiary),
-                        modifier = Modifier.weight(1f),
-                    )
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            LyricsSourcePref.NAMES[id] ?: id,
+                            style = Immersive.Body.copy(color = if (on) Immersive.Text else Immersive.TextTertiary),
+                        )
+                        if (id == "genius") Text(
+                            stringResource(app.myspoti.engine.R.string.settings_genius_detail),
+                            style = Immersive.Caption.copy(color = Immersive.TextTertiary),
+                            maxLines = 2,
+                        )
+                    }
                     Spacer(Modifier.width(8.dp))
                     Switch(checked = on, onCheckedChange = null)
                     Spacer(Modifier.width(8.dp))

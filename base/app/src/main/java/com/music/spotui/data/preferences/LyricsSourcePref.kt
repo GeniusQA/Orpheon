@@ -43,12 +43,22 @@ object LyricsSourcePref {
     fun setAuto(c: Context, value: Boolean) = prefs(c).edit().putBoolean(KEY_AUTO, value).apply()
 
     /** A source is on by default (all built-ins on, same as the old behaviour). */
-    fun isEnabled(c: Context, id: String): Boolean = prefs(c).getBoolean(KEY_PREFIX + id, true)
+    fun isEnabled(c: Context, id: String): Boolean {
+        // Installs that turned off the removed standalone Genius row keep that choice.
+        if (id == "genius" && !prefs(c).contains(KEY_PREFIX + id) && prefs(c).contains("genius"))
+            return prefs(c).getBoolean("genius", true)
+        return prefs(c).getBoolean(KEY_PREFIX + id, true)
+    }
 
     fun setEnabled(c: Context, id: String, value: Boolean) {
         // Never let the user turn every source off.
         if (!value && enabledIds(c).size <= 1 && isEnabled(c, id)) return
-        prefs(c).edit().putBoolean(KEY_PREFIX + id, value).apply()
+        prefs(c).edit().apply {
+            putBoolean(KEY_PREFIX + id, value)
+            // GeniusPref used to live under "genius"; keep old readers in step.
+            if (id == "genius") putBoolean("genius", value)
+            apply()
+        }
     }
 
     /** The user's saved order, normalised (dedup + every built-in present). */

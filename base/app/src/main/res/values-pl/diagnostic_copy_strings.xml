@@ -1,0 +1,6 @@
+<resources>
+    <string name="diagnostic_copy_title">Kopiuj logi diagnostyczne</string>
+    <string name="diagnostic_copy_detail">Kopiuje sekcję logów z raportu diagnostycznego</string>
+    <string name="diagnostic_copy_done">Skopiowano logi diagnostyczne</string>
+    <string name="diagnostic_copy_failed">Nie udało się skopiować logów diagnostycznych</string>
+</resources>

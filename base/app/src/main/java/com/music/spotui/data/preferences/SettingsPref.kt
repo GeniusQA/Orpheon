@@ -26,21 +26,17 @@ fun setLyricsWordSync(c: Context, v: Boolean) = prefs(c).edit().putBoolean("lyri
 private fun prefs(c: Context) = c.getSharedPreferences(PREF, Context.MODE_PRIVATE)
 
 /**
- * Genius (on by default): what a song means and the notes on its lines, and Genius's plain-text
- * lyrics as a last resort. Off: nothing is asked of genius.com and the Genius parts (the light
- * bulb, the underlined lines, the "Meaning" row, Genius among the lyrics sources) are gone. Read as
- * state by both looks; read off the main thread by GeniusMeaning and LyricsApi (true before the
- * app is set up, in tests).
+ * Genius has one user switch: the Genius row in Lyrics sources. It controls the meaning, the line
+ * annotations, Genius lyrics, and every genius.com request. This object is the app-wide reader of
+ * that switch; the value lives with the other per-source settings. The old [KEY] is accepted and
+ * kept in sync for installs that used the removed standalone settings row.
  */
 object GeniusPref {
     private const val KEY = "genius"
-    var on by androidx.compose.runtime.mutableStateOf(
-        runCatching { prefs(com.music.spotui.di.Graph.app).getBoolean(KEY, true) }.getOrDefault(true))
-        private set
+    val on: Boolean get() = runCatching { LyricsSourcePref.isEnabled(com.music.spotui.di.Graph.app, KEY) }.getOrDefault(true)
 
     fun set(c: Context, value: Boolean) {
-        on = value
-        prefs(c).edit().putBoolean(KEY, value).apply()
+        LyricsSourcePref.setEnabled(c, KEY, value)
         if (!value) com.music.spotui.data.api.GeniusMeaning.forget()
         // Lyrics read from Genius before are not kept: the song is read again from the others.
         com.music.spotui.data.api.LyricsApi.forgetAll()

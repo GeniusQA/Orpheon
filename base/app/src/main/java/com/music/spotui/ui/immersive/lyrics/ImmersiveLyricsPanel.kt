@@ -155,7 +155,11 @@ import com.music.spotui.ui.components.shareLyricLines
  * list keeps clear of whatever the player draws over it.
  */
 @Composable
-fun ImmersiveLyricsPanel(modifier: Modifier = Modifier, contentPadding: PaddingValues = PaddingValues()) {
+fun ImmersiveLyricsPanel(
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(),
+    actionsEndPadding: Dp? = null,
+) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val vm: LyricsViewModel = viewModel()
     val song = Graph.currentSongState
@@ -237,7 +241,7 @@ fun ImmersiveLyricsPanel(modifier: Modifier = Modifier, contentPadding: PaddingV
                                 .align(Alignment.TopEnd)
                                 .padding(
                                     top = contentPadding.calculateTopPadding(),
-                                    end = Immersive.Gutter + contentPadding.calculateEndPadding(layoutDirection),
+                                    end = actionsEndPadding ?: (Immersive.Gutter + contentPadding.calculateEndPadding(layoutDirection)),
                                 ),
                         ) {
                             if (canRomanize) LyricsToggle(

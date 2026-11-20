@@ -73,6 +73,7 @@ import com.music.spotui.ui.immersive.Immersive
 import com.music.spotui.ui.look.rememberReduceMotion
 import com.music.spotui.ui.navigation.Routes
 import com.music.spotui.ui.screens.installedRoute
+import com.music.spotui.ui.screens.copyDiagnosticLogs
 import com.music.spotui.ui.screens.shareDiagnosticReport
 import kotlinx.coroutines.launch
 
@@ -481,15 +482,6 @@ private fun LyricsPage(open: (SettingsPage) -> Unit, back: () -> Unit) {
                     detail = stringResource(R.string.lyrics_extra_summary),
                     chevron = true,
                     onClick = { open(SettingsPage.LyricsSources) },
-                )
-            }
-            // Genius: the meaning of songs and the notes on their lines, and its lyrics as a last resort.
-            row {
-                ImmersiveSwitchRow(
-                    stringResource(R.string.settings_genius_title),
-                    checked = com.music.spotui.data.preferences.GeniusPref.on,
-                    onChecked = { com.music.spotui.data.preferences.GeniusPref.set(ctx, it) },
-                    detail = stringResource(R.string.settings_genius_detail),
                 )
             }
             row {
@@ -1177,6 +1169,12 @@ private fun AppPage(navController: NavController, back: () -> Unit) {
                         app.myspoti.host.android.MyspotiRuntime.host.reload()
                         android.widget.Toast.makeText(ctx, ctx.getString(R.string.restart_player_done), android.widget.Toast.LENGTH_SHORT).show()
                     },
+                )
+            }
+            row {
+                ImmersiveGroupRow(
+                    stringResource(R.string.diagnostic_copy_title), detail = stringResource(R.string.diagnostic_copy_detail),
+                    onClick = { copyDiagnosticLogs(ctx) },
                 )
             }
             row {

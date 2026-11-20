@@ -100,7 +100,9 @@ internal fun LyricsSourceConfig(ctx: android.content.Context) {
                         .toggleable(on, role = Role.Switch) {
                             // Guard: keep at least one source enabled.
                             if (!it && enabled.values.count { v -> v } <= 1) return@toggleable
-                            LyricsSourcePref.setEnabled(ctx, id, it)
+                            if (id == "genius")
+                                com.music.spotui.data.preferences.GeniusPref.set(ctx, it)
+                            else LyricsSourcePref.setEnabled(ctx, id, it)
                             enabled = enabled.toMutableMap().also { m -> m[id] = it }
                             com.music.spotui.data.api.LyricsApi.forgetAll()
                         }
@@ -111,6 +113,10 @@ internal fun LyricsSourceConfig(ctx: android.content.Context) {
                     Spacer(Modifier.width(6.dp))
                     Column(Modifier.weight(1f)) {
                         Text(LyricsSourcePref.NAMES[id] ?: id, color = if (on) AppText else AppMuted, fontSize = 15.sp)
+                        if (id == "genius") Text(
+                            androidx.compose.ui.res.stringResource(app.myspoti.engine.R.string.settings_genius_detail),
+                            color = AppMuted, fontSize = 12.sp,
+                        )
                     }
                     if (!auto) {
                         IconButton(onClick = { LyricsSourcePref.move(ctx, id, -1); commitOrder() },

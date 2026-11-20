@@ -418,7 +418,7 @@ fun ImmersivePlayer(
                     ) { shown ->
                         val inset = PaddingValues(start = left, end = left, top = 12.dp, bottom = 12.dp)
                         when (shown) {
-                            Panel.LYRICS -> ImmersiveLyricsPanel(Modifier.fillMaxSize(), inset)
+                            Panel.LYRICS -> ImmersiveLyricsPanel(Modifier.fillMaxSize(), inset, actionsEndPadding = left)
                             Panel.QUEUE -> ImmersiveQueuePanel(Modifier.fillMaxSize(), inset)
                             else -> Box(Modifier.fillMaxSize())
                         }

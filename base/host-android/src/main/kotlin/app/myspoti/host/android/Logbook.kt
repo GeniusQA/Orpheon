@@ -86,6 +86,11 @@ object Logbook {
     /** The buffered lines, oldest first. */
     fun recent(): String = synchronized(lines) { lines.joinToString("\n") }
 
+    /** The report's log section alone, with the same masking and trimming as in the exported file. */
+    fun logSection(): String = synchronized(lines) {
+        app.myspoti.spotify.report.DiagnosticDigest.digest(lines.toList())
+    }
+
     /**
      * Writes the report (device and version header, then [recent]) to the app's own external
      * files directory, so it can be handed to the share sheet through the FileProvider.

@@ -302,13 +302,6 @@ fun SettingsScreen(navController: NavController) {
             )
             // Per-source control: auto pick best, or switch/reorder the lyrics sources yourself.
             LyricsSourceConfig(ctx)
-            // Genius: the meaning of songs and the notes on their lines, and its lyrics as a last resort.
-            OptionRow(
-                label = stringResource(R.string.settings_genius_title),
-                detail = stringResource(R.string.settings_genius_detail),
-                checked = com.music.spotui.data.preferences.GeniusPref.on,
-                onChecked = { com.music.spotui.data.preferences.GeniusPref.set(ctx, it) },
-            )
             OptionRow(
                 label = stringResource(R.string.settings_lyrics_keep_awake_title),
                 detail = stringResource(R.string.settings_lyrics_keep_awake_detail),
@@ -494,6 +487,14 @@ fun SettingsScreen(navController: NavController) {
             ) {
                 Text(stringResource(R.string.restart_player_title), color = AppText, fontSize = 16.sp)
                 Text(stringResource(R.string.restart_player_detail), color = AppMuted, fontSize = 12.sp)
+            }
+            // The log a tester can paste straight into chat, without sharing the whole report file.
+            Column(
+                Modifier.fillMaxWidth().clickable { copyDiagnosticLogs(ctx) }
+                    .padding(horizontal = 20.dp, vertical = 10.dp),
+            ) {
+                Text(stringResource(R.string.diagnostic_copy_title), color = AppText, fontSize = 16.sp)
+                Text(stringResource(R.string.diagnostic_copy_detail), color = AppMuted, fontSize = 12.sp)
             }
             // The report a tester hands us. The engine's log is otherwise reachable only through
             // adb logcat, which the person reporting the bug cannot run.
@@ -1256,6 +1257,20 @@ private fun AboutRow() {
             }
         }
     }
+}
+
+/** Copies only the masked log section of the diagnostic report, for pasting into chat or an issue. */
+internal fun copyDiagnosticLogs(context: android.content.Context) {
+    val text = runCatching { app.myspoti.host.android.Logbook.logSection() }.getOrNull()
+    val clipboard = context.getSystemService(android.content.ClipboardManager::class.java)
+    val copied = !text.isNullOrBlank() && clipboard != null && runCatching {
+        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Orpheon diagnostic logs", text))
+    }.isSuccess
+    android.widget.Toast.makeText(
+        context,
+        context.getString(if (copied) R.string.diagnostic_copy_done else R.string.diagnostic_copy_failed),
+        android.widget.Toast.LENGTH_SHORT,
+    ).show()
 }
 
 /**
