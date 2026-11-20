@@ -223,7 +223,7 @@ object LyricsApi {
 
     private fun allSetAside(vararg ids: String): String? = ids.map { health.reason(it) }.takeIf { r -> r.all { it != null } }?.first()
 
-    private val WORD_SOURCES = setOf("amll", "lyricsplus", "lrcred", "netease", "kugou", "qqmusic")
+    private val WORD_SOURCES = setOf("amll", "lunabeat", "netease", "qqmusic", "kuwo", "kugou")
 
     /** The providers that can be tried for [track], in the configured order; the extensions giving lyrics come last (`ext:<id>`). */
     fun sources(track: Track): List<Source> = buildList {
@@ -232,19 +232,15 @@ object LyricsApi {
         for (id in sourceOrder()) {
             if (!sourceEnabled(id)) continue
             if (id == "genius" && !geniusOn) continue
-            if (id == "spotify" && track.trackId.isBlank()) continue
             if (id == "amll" && track.trackId.isBlank()) continue
             val (name, words, reason) = when (id) {
-                "spotify" -> Triple("Spotify", true, null)
                 "amll" -> Triple("AMLL TTML DB", true, allSetAside("amll"))
-                "lyricsplus" -> Triple("LyricsPlus", true, allSetAside(*LYRICS_PLUS.toTypedArray()))
-                "lrcred" -> Triple("lrc.red", true, allSetAside("lrcred"))
-                "kugou" -> Triple("Kugou", true, allSetAside("kugou"))
-                "lrclib" -> Triple("LRCLIB", false, allSetAside("lrclib"))
+                "lunabeat" -> Triple("LunaBeat", true, allSetAside("lunabeat"))
                 "netease" -> Triple("NetEase", true, allSetAside("netease"))
-                "genius" -> Triple("Genius", false, allSetAside("genius"))
                 "qqmusic" -> Triple("QQ Music", true, allSetAside("qqmusic"))
-                "kuwo" -> Triple("KuWo", false, allSetAside("kuwo"))
+                "kuwo" -> Triple("KuWo", true, allSetAside("kuwo"))
+                "kugou" -> Triple("Kugou", true, allSetAside("kugou"))
+                "genius" -> Triple("Genius", false, allSetAside("genius"))
                 else -> continue
             }
             add(Source(id, name, words, reason))
@@ -258,15 +254,12 @@ object LyricsApi {
         val p = lyrics.provider.orEmpty().lowercase()
         return when {
             "amll" in p -> "amll"
-            "lyricsplus" in p -> "lyricsplus"
-            "lrc.red" in p -> "lrcred"
+            "lunabeat" in p -> "lunabeat"
             "kugou" in p -> "kugou"
-            "lrclib" in p -> "lrclib"
             "netease" in p -> "netease"
             "genius" in p -> "genius"
             "qq music" in p -> "qqmusic"
             "kuwo" in p -> "kuwo"
-            lyrics.colors != null -> "spotify"
             else -> null
         }
     }
@@ -277,38 +270,20 @@ object LyricsApi {
      * replaces the song's lyrics in memory and storage; null (nothing changes) when it has none.
      */
     suspend fun fetchFrom(track: Track, sourceId: String): Lyrics? = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-        val asked = track.title.trim()
         val title = cleanTitle(track.title)
         val artist = track.artist.substringBefore(",").trim()
-        val durationMs = track.durationMs
-        val durationSec = (durationMs / 1000).toInt()
         fun <T> byHand(block: () -> T): T { bypass.set(true); try { return block() } finally { bypass.remove() } }
         suspend fun <T> byHandSuspend(block: suspend () -> T): T { bypass.set(true); try { return block() } finally { bypass.remove() } }
-        val spotify = if (sourceId in WORD_SOURCES) runCatching { fromSpotify(track) }.getOrNull() else null
         val found = try {
             when {
-                sourceId == "spotify" -> fromSpotify(track)
                 sourceId.startsWith("ext:") -> com.music.spotui.extensions.Extensions.lyricsFromExtension(
-                    sourceId.removePrefix("ext:"), track.trackId, track.title, track.artist, track.album, durationMs, track.coverUrl)
-                sourceId == "amll" -> byHand { fromAmll(track.trackId) }
-                sourceId == "lyricsplus" -> byHand { fromLyricsPlus(asked, title, artist, durationMs) }
-                sourceId == "lrcred" -> byHand { fromLrcRed(asked, title, artist, durationMs) }
-                sourceId == "kugou" -> byHand { fromKugou(title, artist, durationMs) }
-                sourceId == "lrclib" -> byHand {
-                    lrclibGet(title, artist, track.album, durationSec)
-                        ?: lrclibSearch("$LRCLIB/search?track_name=${enc(title)}&artist_name=${enc(artist)}", title, artist, durationSec)
-                        ?: lrclibSearch("$LRCLIB/search?track_name=${enc(title)}", title, artist, durationSec)
-                }
-                sourceId == "netease" -> byHand { fromNetEaseWords(title, artist, durationMs) ?: fromNetEase(title, artist, durationSec) }
+                    sourceId.removePrefix("ext:"), track.trackId, track.title, track.artist, track.album, track.durationMs, track.coverUrl)
                 sourceId == "genius" -> byHand { fromGenius(title, artist) }
-                sourceId == "qqmusic" -> byHandSuspend { LyricsPlatformSources.fromQQMusic(title, artist, durationMs) }
-                sourceId == "kuwo" -> byHandSuspend { LyricsPlatformSources.fromKuWo(title, artist, durationMs) }
+                sourceId in WORD_SOURCES -> byHandSuspend { ReferenceLyricSources.fetch(sourceId, track) }
                 else -> null
             }
         } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { Log.d("LyricsApi", "$sourceId by hand: ${e.javaClass.simpleName}"); null }
-        val lyrics = found?.takeIf { !it.isEmpty } ?: return@withContext null
-        // Words from another recording follow Spotify's own timing when that can be checked, and keep its colours.
-        val chosen = if (lyrics.wordSynced && spotify != null) (alignTo(lyrics, spotify) ?: lyrics).copy(colors = spotify.colors) else lyrics
+        val chosen = found?.takeIf { !it.isEmpty } ?: return@withContext null
         cache[track.key] = chosen
         LyricsDisk.write(track.key, chosen)
         Log.d("LyricsApi", "${track.title}: ${chosen.lines.size} lines from ${chosen.provider} (chosen: $sourceId)")
@@ -349,7 +324,7 @@ object LyricsApi {
                 com.music.spotui.extensions.Extensions.lyricsFor(track.trackId, track.title, track.artist, track.album, track.durationMs, track.coverUrl)
             }
         } else null
-        val own = if (wordSync) wordFirst(track) else fromSpotify(track) ?: lineFallbacks(track)
+        val own = if (wordSync) wordFirst(track) else lineFallbacks(track)
         val answer = when {
             ext == null -> null
             own != null && com.music.spotui.extensions.LyricsMerge.level(own) == 3 && com.music.spotui.extensions.LyricsMerge.isSpotifyComplete(own) &&
@@ -553,41 +528,27 @@ object LyricsApi {
     }
 
     /**
-     * "Word by word" (the setting): the sources with each word's time come first — Spotify's own
-     * when it has them, then LyricsPlus, lrc.red and Kugou, asked together; the line-synced
-     * chain after them. Spotify's colours are kept whoever gives the words.
+     * Word-by-word mode: ask the six reference platforms together and prefer a word-synced answer.
      */
     private suspend fun wordFirst(track: Track): Lyrics? = coroutineScope {
-        // The catalogues are asked with the full title: "Old Town Road - Remix" cut down to
-        // "Old Town Road" found the original (1:53), refused for its length (reported: lyrics
-        // not complete). The comparison still uses the title without its asides.
-        val asked = track.title.trim()
-        val title = cleanTitle(track.title)
-        val artist = track.artist.substringBefore(",").trim()
-        val durationMs = track.durationMs
-        val spotify = async { if (sourceEnabled("spotify")) fromSpotify(track) else null }
-        val plus = async { if (sourceEnabled("lyricsplus")) within(WORD_WAIT_MS) { asking("lyricsplus", track) { fromLyricsPlus(asked, title, artist, durationMs) } } else null }
-        val red = async { if (sourceEnabled("lrcred")) within(WORD_WAIT_MS) { asking("lrcred", track) { fromLrcRed(asked, title, artist, durationMs) } } else null }
-        val kugou = async { if (sourceEnabled("kugou")) within(WORD_WAIT_MS) { asking("kugou", track) { fromKugou(title, artist, durationMs) } } else null }
-        // Hand-timed syllable by syllable by its community (CC0), found by the song's Spotify id.
-        val amll = async { if (sourceEnabled("amll")) within(WORD_WAIT_MS) { asking("amll", track) { fromAmll(track.trackId) } } else null }
-        val netease = async { if (sourceEnabled("netease")) within(WORD_WAIT_MS) { asking("netease", track) { fromNetEaseWords(title, artist, durationMs) } } else null }
-        val qq = async { if (sourceEnabled("qqmusic")) withinSuspend(WORD_WAIT_MS) { askingSuspend("qqmusic", track) { LyricsPlatformSources.fromQQMusic(title, artist, durationMs) } } else null }
-        val sp = spotify.await()
-        // Shown at once while the word timings or the backing vocals are looked for (reported: lyrics slow to come).
-        if (sp != null) showEarly(track, sp)
-        if (sp != null && sp.wordSynced && sp.uncapped) {
-            kugou.cancel(); netease.cancel(); qq.cancel()
-            return@coroutineScope withBacks(sp, amll, plus, red)
+        val asked = linkedMapOf<String, kotlinx.coroutines.Deferred<Lyrics?>>()
+        for (id in sourceOrder()) {
+            if (id !in WORD_SOURCES || !sourceEnabled(id)) continue
+            if (id == "amll" && track.trackId.isBlank()) continue
+            asked[id] = async {
+                withinSuspend(WORD_WAIT_MS) {
+                    askingSuspend(id, track) { ReferenceLyricSources.fetch(id, track) }
+                }
+            }
         }
-        // Without Spotify's own (no account, or none for the song) every catalogue still answers.
-        val words = (amll.await()?.takeIf { it.wordSynced } ?: plus.await()?.takeIf { it.wordSynced } ?: red.await()?.takeIf { it.wordSynced }
-            ?: netease.await()?.takeIf { it.wordSynced } ?: qq.await()?.takeIf { it.wordSynced } ?: kugou.await())?.takeIf { it.wordSynced }
-        when {
-            words != null -> alignTo(words, sp)?.copy(colors = sp?.colors)?.let { withBacks(it, amll, plus, red) } ?: sp
-            sp != null -> sp
-            else -> lineFallbacks(track)
-        }
+        val results = asked.mapValues { it.value.await() }.filterValues { it != null }
+        val order = sourceOrder()
+        val best = results.entries.sortedWith(
+            compareByDescending<Map.Entry<String, Lyrics?>> { it.value?.wordSynced == true }
+                .thenByDescending<Map.Entry<String, Lyrics?>> { it.value?.synced == true }
+                .thenBy { order.indexOf(it.key).let { i -> if (i < 0) Int.MAX_VALUE else i } }
+        ).firstOrNull()?.value
+        best ?: lineFallbacks(track)
     }
 
     /**
@@ -639,27 +600,15 @@ object LyricsApi {
     private suspend fun lineFallbacks(track: Track): Lyrics? = coroutineScope {
             val title = cleanTitle(track.title)
             val artist = track.artist.substringBefore(",").trim()
-            val durationSec = (track.durationMs / 1000).toInt()
             // Ask every enabled line source at once (auto = all by default; manual = the user's picks/order).
             val asked = linkedMapOf<String, kotlinx.coroutines.Deferred<Lyrics?>>()
             for (id in sourceOrder()) {
                 if (!sourceEnabled(id)) continue
+                if (id == "amll" && track.trackId.isBlank()) continue
                 asked[id] = async {
                     askingSuspend(id, track) {
-                        when (id) {
-                            "lrclib" -> {
-                                val exact = async { lrclibGet(title, artist, track.album, durationSec) }
-                                val fuzzy = async { lrclibSearch("$LRCLIB/search?track_name=${enc(title)}&artist_name=${enc(artist)}", title, artist, durationSec) }
-                                exact.await() ?: fuzzy.await()
-                                    ?: lrclibSearch("$LRCLIB/search?track_name=${enc(title)}", title, artist, durationSec)
-                            }
-                            "netease" -> fromNetEase(title, artist, durationSec)
-                            "genius" -> fromGenius(title, artist)
-                            "kugou" -> fromKugou(title, artist, track.durationMs)
-                            "qqmusic" -> LyricsPlatformSources.fromQQMusic(title, artist, track.durationMs)
-                            "kuwo" -> LyricsPlatformSources.fromKuWo(title, artist, track.durationMs)
-                            else -> null
-                        }
+                        if (id == "genius") fromGenius(title, artist)
+                        else ReferenceLyricSources.fetch(id, track)
                     }
                 }
             }

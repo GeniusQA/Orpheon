@@ -14,21 +14,18 @@ import android.content.Context
 object LyricsSourcePref {
     /** Built-in sources, in the resolver's default (best) order. */
     val ALL: List<String> = listOf(
-        "spotify", "amll", "lyricsplus", "lrcred", "kugou", "lrclib", "netease", "genius", "qqmusic", "kuwo"
+        "amll", "lunabeat", "netease", "qqmusic", "kuwo", "kugou", "genius"
     )
 
     /** Human-readable names (brands, not translated), matching LyricsApi.Source.name. */
     val NAMES: Map<String, String> = mapOf(
-        "spotify" to "Spotify",
         "amll" to "AMLL TTML DB",
-        "lyricsplus" to "LyricsPlus",
-        "lrcred" to "lrc.red",
-        "kugou" to "Kugou",
-        "lrclib" to "LRCLIB",
+        "lunabeat" to "LunaBeat",
         "netease" to "NetEase",
-        "genius" to "Genius",
         "qqmusic" to "QQ Music",
         "kuwo" to "KuWo",
+        "kugou" to "Kugou",
+        "genius" to "Genius",
     )
 
     private const val PREF = "settings_prefs"
