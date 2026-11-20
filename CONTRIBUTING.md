@@ -1,4 +1,4 @@
-# Contributing to Myspoti
+# Contributing to Orpheon
 
 Thanks for helping. Bug reports (with a diagnostic report from Settings), fixes and translations are all welcome.
 
@@ -24,4 +24,4 @@ Put your SDK path in `base/local.properties` (`sdk.dir=...`). The live API tests
 
 - **Extensions API:** an extension call that is accepted today must never become an error. New fields and calls are fine; removing, renaming or tightening an existing one is not.
 - **Spotify:** Orpheon talks to Spotify the way its Web Player does. No contribution may bypass, weaken or work around Spotify's protections (DRM, licences, attestation, rate limits), and none may add a Spotify audio download or decryption.
-- **License:** Myspoti is GPL-3.0. Your contribution is released under the same license. If you reuse this code in another project, keep the notices, credit Orpheon (https://github.com/GeniusQA/Orpheon) and publish your complete source under GPL-3.0; closing the source or changing the license is a violation.
+- **License:** Orpheon is GPL-3.0. Your contribution is released under the same license. If you reuse this code in another project, keep the notices, credit Orpheon (https://github.com/GeniusQA/Orpheon) and publish your complete source under GPL-3.0; closing the source or changing the license is a violation.

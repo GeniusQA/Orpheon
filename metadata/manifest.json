@@ -1,0 +1,22 @@
+{
+  "manifest": 1,
+  "version": 2,
+  "minApi": 1,
+  "scripts": [
+    {
+      "name": "deezer.js",
+      "sha256": "2141c95d55a4a8202701494a9d1abcdd7102451122544c4a6aa985bc6c70730b",
+      "size": 42009
+    },
+    {
+      "name": "tidal.js",
+      "sha256": "a6c88112a17b3a5956f343b9d991b71565fc3bc800d77d214ec985fbc5445297",
+      "size": 53382
+    },
+    {
+      "name": "ytmusic.js",
+      "sha256": "51350b64bf59d82a115a98553aab4a4f9e2a11f3fb4ae962cddf9d3b2f86b20b",
+      "size": 123875
+    }
+  ]
+}

@@ -30,8 +30,8 @@ down for that call and the next one in the user's order answers.
 
        python3 tools/sign_scripts.py <scripts folder> <output folder> <version> <private key.pem>
 
-4. Commit the content of the output folder (`manifest.json`, `manifest.json.sig`, `scripts/*.js`) to the root of the
-   publishing repository (`SCRIPTS_BASE_URL` in `ScriptUpdates.kt`).
+4. Commit the content of the output folder (`manifest.json`, `manifest.json.sig`, `scripts/*.js`) to this repository's
+   `metadata/` folder (`SCRIPTS_BASE_URL` in `ScriptUpdates.kt`).
 
 Keep `README.md`, `LICENSE-LGPL-3.0.txt` and `COPYING-GPL-3.0.txt` next to them (the scripts come from Mornye
 Extension, LGPL-3.0-only).

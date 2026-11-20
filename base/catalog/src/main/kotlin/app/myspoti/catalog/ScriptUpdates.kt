@@ -29,11 +29,11 @@ const val CATALOG_API_VERSION = 1
 /** The version of the scripts bundled in the resources. A downloaded set has to be newer. */
 const val BUNDLED_SCRIPTS_VERSION = 1
 
-/** Where the signed sets are published (create this repository with the signed output first). */
-const val SCRIPTS_BASE_URL = "https://raw.githubusercontent.com/GeniusQA/Orpheon-metadata/main/"
+/** Where the signed sets are published (metadata/ in this repository). */
+const val SCRIPTS_BASE_URL = "https://raw.githubusercontent.com/GeniusQA/Orpheon/main/metadata/"
 
 /** ECDSA P-256 (X.509 SubjectPublicKeyInfo, base64). The private half is kept outside the repository. */
-const val SCRIPTS_PUBLIC_KEY = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE7K1uWFA/4IEU1oT31UJQ6HHEj0IlD4xgyVmzojN4Z1xp8VfCo5M+W4wKXl1hpR0pGGFOMI0WskxnVkNjobqLbA=="
+const val SCRIPTS_PUBLIC_KEY = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEib8WVsdauYgQH6yP7YGJctcxoe1TmSlqxMXZntJYdFcjFZVwfrzAOCu1BWbuSRp4qPrua/DW5jr/NpJ9TeuMyA=="
 
 const val MAX_MANIFEST_BYTES = 64 * 1024
 const val MAX_SCRIPT_BYTES = 256 * 1024
