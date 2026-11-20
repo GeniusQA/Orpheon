@@ -561,7 +561,7 @@ object LyricsApi {
                 val found = withinSuspend(WORD_WAIT_MS) {
                     askingSuspend(id, track) { askSource(track, id) }
                 }
-                if (!found.isNullOrEmpty()) return@coroutineScope found
+                if (found != null && !found.isEmpty) return@coroutineScope found
             }
             return@coroutineScope null
         }
@@ -572,13 +572,13 @@ object LyricsApi {
                 val found = withinSuspend(WORD_WAIT_MS) {
                     askingSuspend(id, track) { askSource(track, id) }
                 }
-                if (!found.isNullOrEmpty() && shown.compareAndSet(false, true)) showEarly(track, found)
+                if (found != null && !found.isEmpty && shown.compareAndSet(false, true)) showEarly(track, found)
                 found
             }
         }
         ids.filter { it in TTML_SOURCES }.forEach(::ask)
         ids.filter { it !in TTML_SOURCES }.forEach(::ask)
-        val results = asked.mapValues { it.value.await() }.filterValues { !it.isNullOrEmpty() }
+        val results = asked.mapValues { it.value.await() }.filterValues { it != null && !it.isEmpty }
         var bestEntry = results.entries.sortedWith(
             compareByDescending<Map.Entry<String, Lyrics?>> { it.value?.wordSynced == true }
                 .thenByDescending { hasTranslation(it.value) }

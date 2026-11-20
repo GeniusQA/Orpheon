@@ -155,7 +155,11 @@ object NativeAudio : app.myspoti.spotify.AccountAudio, app.myspoti.spotify.sync.
     override suspend fun next() { commandAtMs = System.currentTimeMillis(); ready().skipNext() }
     override suspend fun previous() { ready().previous() }
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(
+        SupervisorJob() + Dispatchers.IO + kotlinx.coroutines.CoroutineExceptionHandler { _, t ->
+            log("background error: ${t.javaClass.simpleName}: ${t.message}")
+        }
+    )
     private val lock = Mutex()
     private var engine: NativeEngine? = null
     private var player: Media3DrmPlayer? = null

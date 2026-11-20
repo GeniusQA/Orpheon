@@ -161,8 +161,13 @@ class NativeEngine(
         socket = ws
         connectionId = awaitConnectionId(ws)
         player.setListener { playerInputs.trySend(it) }
-        jobs += scope.launch { for (e in playerInputs) handlePlayerEvent(e) }
-        jobs += scope.launch { readDealer(ws) }
+        jobs += scope.launch {
+            for (e in playerInputs) runCatching { handlePlayerEvent(e) }
+                .onFailure { emit(EngineEvent.Failure("player event: ${it.message}")) }
+        }
+        jobs += scope.launch {
+            runCatching { readDealer(ws) }.onFailure { emit(EngineEvent.Failure("dealer: ${it.message}")) }
+        }
         jobs += scope.launch { while (true) { delay(30_000); runCatching { ws.send("""{"type":"ping"}""") } } }
 
         val correlation = tokens.clientToken().deviceId

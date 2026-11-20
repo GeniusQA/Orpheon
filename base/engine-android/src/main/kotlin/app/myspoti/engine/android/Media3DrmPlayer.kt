@@ -107,7 +107,11 @@ class Media3DrmPlayer(
     private val thread = if (looper == null) HandlerThread("engine-player").apply { start() } else null
     private val handler = Handler(looper ?: thread!!.looper)
     private val appDispatcher = handler.asCoroutineDispatcher()
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(
+        SupervisorJob() + Dispatchers.IO + kotlinx.coroutines.CoroutineExceptionHandler { _, t ->
+            log("background error: ${t.javaClass.simpleName}: ${t.message}")
+        }
+    )
     /** Calls in the order the engine made them; a load may first wait for the certificate. */
     private val commands = Channel<suspend () -> Unit>(Channel.UNLIMITED)
 
