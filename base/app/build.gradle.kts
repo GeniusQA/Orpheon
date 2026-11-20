@@ -44,7 +44,7 @@ android {
     val beta = version.contains("-beta")
     defaultConfig {
         applicationId = if (automixLab) "com.genius.orpheon.lab" else "com.genius.orpheon"
-        manifestPlaceholders["appLabel"] = if (automixLab) "Orpheon Lab" else "Orpheon"
+        manifestPlaceholders["appLabel"] = "Orpheon"
         // The adb command line (com.music.spotui.cli): betas and debug builds only.
         manifestPlaceholders["cliEnabled"] = beta.toString()
         minSdk = 29
@@ -96,7 +96,7 @@ android {
         debug {
             // Installs next to the release apps (own data, own sign-in).
             if (!automixLab) applicationIdSuffix = ".dev"
-            manifestPlaceholders["appLabel"] = if (automixLab) "Orpheon Mix Lab" else "Orpheon dev"
+            manifestPlaceholders["appLabel"] = "Orpheon"
             manifestPlaceholders["cliEnabled"] = "true"
             buildConfigField("String", "UPDATE_REPO", "\"\"")
         }
@@ -108,7 +108,6 @@ android {
             // beta on the test phone without replacing the signed beta installed there.
             if (findProperty("overDev") != null && !automixLab) {
                 applicationIdSuffix = ".dev"
-                manifestPlaceholders["appLabel"] = "Orpheon dev"
                 buildConfigField("String", "UPDATE_REPO", "\"\"")
             }
             // The Mix Lab stays drivable from the CLI in its optimised build, as in its debug one.
