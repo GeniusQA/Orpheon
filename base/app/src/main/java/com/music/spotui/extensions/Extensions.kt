@@ -45,6 +45,7 @@ import app.myspoti.extensions.TrackInfo
 import app.myspoti.host.android.Logbook
 import app.myspoti.host.android.MyspotiRuntime
 import com.music.spotui.data.entity.Lyrics
+import com.music.spotui.di.Graph
 import com.music.spotui.di.SongPlayer
 import com.music.spotui.ui.components.UserNotices
 import kotlinx.coroutines.flow.first
@@ -1154,14 +1155,32 @@ object Extensions {
     private fun noted(id: String, hook: Hook, o: Outcome, ms: Long) {
         log(id, "${hook.key}: ${o.describe()} ($ms ms)")
         val name = _registry.value.find(id)?.name ?: id
-        val state = if (o is Outcome.Found) "成功" else "失败"
-        UserNotices.post("$name ${hook.key} $state：${o.describe()}", long = o !is Outcome.Found)
+        val state = Graph.app.getString(if (o is Outcome.Found) app.myspoti.engine.R.string.notice_success else app.myspoti.engine.R.string.notice_failed)
+        val detail = o.detail?.takeIf { it.isNotBlank() }?.let { "：$it" }.orEmpty()
+        UserNotices.post("$name ${hook.key} $state：${outcomeText(o.key)}$detail", long = o !is Outcome.Found)
         cooldown.note(id, o)?.let { log(id, "set aside for ${it / 1000} s (${o.key}): not asked meanwhile") }
         when (o) {
             is Outcome.SignIn -> signInNeeded(id, o.detail)
             Outcome.Found -> if (id in _signIns.value) dismissSignIn(id)
             else -> {}
         }
+    }
+
+    /** Human-readable, app-language label for an extension outcome key. */
+    private fun outcomeText(key: String): String {
+        val res = when (key) {
+            "found" -> app.myspoti.engine.R.string.outcome_found
+            "not-found", "none" -> app.myspoti.engine.R.string.outcome_not_found
+            "sign-in", "signin" -> app.myspoti.engine.R.string.outcome_sign_in
+            "rate-limited" -> app.myspoti.engine.R.string.outcome_rate_limited
+            "quality-unavailable" -> app.myspoti.engine.R.string.outcome_quality_unavailable
+            "server-down" -> app.myspoti.engine.R.string.outcome_server_down
+            "network" -> app.myspoti.engine.R.string.outcome_network
+            "skipped" -> app.myspoti.engine.R.string.outcome_skipped
+            "bug", "error" -> app.myspoti.engine.R.string.outcome_bug
+            else -> return key
+        }
+        return Graph.app.getString(res)
     }
 
     private fun signInNeeded(id: String, detail: String?) {

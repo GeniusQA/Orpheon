@@ -1,0 +1,8 @@
+<resources>
+    <string name="notice_success">Success</string>
+    <string name="notice_failed">Failed</string>
+    <string name="notice_download_done">Downloaded: %1$s</string>
+    <string name="notice_download_failed">Download failed: %1$s, %2$s</string>
+    <string name="notice_download_no_response">%1$s not responding</string>
+    <string name="notice_download_generic_failed">Download failed</string>
+</resources>

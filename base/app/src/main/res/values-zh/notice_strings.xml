@@ -1,0 +1,8 @@
+<resources>
+    <string name="notice_success">成功</string>
+    <string name="notice_failed">失败</string>
+    <string name="notice_download_done">已下载：%1$s</string>
+    <string name="notice_download_failed">下载失败：%1$s，%2$s</string>
+    <string name="notice_download_no_response">%1$s 无响应</string>
+    <string name="notice_download_generic_failed">下载失败</string>
+</resources>

@@ -1,0 +1,8 @@
+<resources>
+    <string name="notice_success">Sucesso</string>
+    <string name="notice_failed">Falha</string>
+    <string name="notice_download_done">Transferido: %1$s</string>
+    <string name="notice_download_failed">Falha ao transferir: %1$s, %2$s</string>
+    <string name="notice_download_no_response">%1$s não responde</string>
+    <string name="notice_download_generic_failed">Falha na transferência</string>
+</resources>

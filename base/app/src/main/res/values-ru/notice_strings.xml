@@ -1,0 +1,8 @@
+<resources>
+    <string name="notice_success">Успешно</string>
+    <string name="notice_failed">Ошибка</string>
+    <string name="notice_download_done">Загружено: %1$s</string>
+    <string name="notice_download_failed">Не удалось загрузить: %1$s, %2$s</string>
+    <string name="notice_download_no_response">%1$s не отвечает</string>
+    <string name="notice_download_generic_failed">Ошибка загрузки</string>
+</resources>

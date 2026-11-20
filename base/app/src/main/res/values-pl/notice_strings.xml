@@ -1,0 +1,8 @@
+<resources>
+    <string name="notice_success">Sukces</string>
+    <string name="notice_failed">Błąd</string>
+    <string name="notice_download_done">Pobrano: %1$s</string>
+    <string name="notice_download_failed">Nie udało się pobrać: %1$s, %2$s</string>
+    <string name="notice_download_no_response">%1$s nie odpowiada</string>
+    <string name="notice_download_generic_failed">Błąd pobierania</string>
+</resources>

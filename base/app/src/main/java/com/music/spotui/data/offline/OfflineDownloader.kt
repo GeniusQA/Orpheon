@@ -290,14 +290,15 @@ object OfflineDownloader {
             }
             synchronized(pending) { pending.remove(r.trackId); savePending() }
             if (outcome == null) {
-                UserNotices.post("已下载：${r.title}")
+                UserNotices.post(Graph.app.getString(app.myspoti.engine.R.string.notice_download_done, r.title))
             } else {
                 val reason = when (outcome) {
-                    OfflineStatus.Unavailable -> "未找到匹配的录音"
-                    OfflineStatus.Failed -> if (by.isEmpty()) "下载失败" else "${by.joinToString()} 无响应"
+                    OfflineStatus.Unavailable -> Graph.app.getString(app.myspoti.engine.R.string.download_unavailable)
+                    OfflineStatus.Failed -> if (by.isEmpty()) Graph.app.getString(app.myspoti.engine.R.string.notice_download_generic_failed)
+                    else Graph.app.getString(app.myspoti.engine.R.string.notice_download_no_response, by.joinToString())
                     else -> outcome.toString()
                 }
-                UserNotices.post("下载失败：${r.title}，$reason", long = true)
+                UserNotices.post(Graph.app.getString(app.myspoti.engine.R.string.notice_download_failed, r.title, reason), long = true)
                 setStatus(r.trackId, outcome, by)
             }
         }

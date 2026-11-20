@@ -1,0 +1,8 @@
+<resources>
+    <string name="notice_success">Επιτυχία</string>
+    <string name="notice_failed">Αποτυχία</string>
+    <string name="notice_download_done">Λήφθηκε: %1$s</string>
+    <string name="notice_download_failed">Η λήψη απέτυχε: %1$s, %2$s</string>
+    <string name="notice_download_no_response">Το %1$s δεν απαντά</string>
+    <string name="notice_download_generic_failed">Αποτυχία λήψης</string>
+</resources>

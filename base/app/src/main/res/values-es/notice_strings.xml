@@ -1,0 +1,8 @@
+<resources>
+    <string name="notice_success">Correcto</string>
+    <string name="notice_failed">Error</string>
+    <string name="notice_download_done">Descargado: %1$s</string>
+    <string name="notice_download_failed">Error al descargar: %1$s, %2$s</string>
+    <string name="notice_download_no_response">%1$s no responde</string>
+    <string name="notice_download_generic_failed">Error de descarga</string>
+</resources>
