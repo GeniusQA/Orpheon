@@ -1,0 +1,4 @@
+<resources>
+    <string name="settings_storage_clear_on_exit">Очищать кэш при выходе</string>
+    <string name="settings_storage_clear_on_exit_detail">При закрытии Orpheon из недавних задач очищает кэш медиа, видео, изображений, текстов песен и приложения. Загрузки и вход сохраняются.</string>
+</resources>

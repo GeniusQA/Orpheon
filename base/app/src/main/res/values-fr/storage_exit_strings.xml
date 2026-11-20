@@ -1,0 +1,4 @@
+<resources>
+    <string name="settings_storage_clear_on_exit">Effacer le cache à la fermeture</string>
+    <string name="settings_storage_clear_on_exit_detail">Lorsque vous fermez Orpheon depuis les tâches récentes, efface les caches multimédia, vidéo, image, paroles et de l’application. Les téléchargements et la connexion sont conservés.</string>
+</resources>

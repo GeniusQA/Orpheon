@@ -1,0 +1,4 @@
+<resources>
+    <string name="settings_storage_clear_on_exit">Limpar cache ao sair</string>
+    <string name="settings_storage_clear_on_exit_detail">Ao fechar o Orpheon a partir de tarefas recentes, limpa o cache de mídia, vídeo, imagens, letras e do app. Downloads e login são mantidos.</string>
+</resources>

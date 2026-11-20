@@ -1,0 +1,4 @@
+<resources>
+    <string name="settings_storage_clear_on_exit">Cache beim Beenden löschen</string>
+    <string name="settings_storage_clear_on_exit_detail">Beim Schließen von Orpheon aus den letzten Aufgaben werden Medien-, Video-, Bild-, Lyrik- und App-Caches gelöscht. Downloads und Anmeldung bleiben erhalten.</string>
+</resources>

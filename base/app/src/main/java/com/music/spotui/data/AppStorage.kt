@@ -71,5 +71,24 @@ object AppStorage {
         withContext(Dispatchers.Main) { runCatching { com.bumptech.glide.Glide.get(context).clearMemory() } }
     }
 
+    /**
+     * Everything safe to clear when the user closes Orpheon from Recents. Downloads, extensions,
+     * sign-in cookies and offline lyrics are kept: those are data, not caches.
+     */
+    suspend fun clearCachesForExit(context: Context) {
+        clearCaches(context)
+        withContext(Dispatchers.IO) {
+            runCatching { com.music.spotui.data.api.LyricsApi.forgetAll() }
+            runCatching { com.music.spotui.data.api.Api.HomeCache.clear() }
+            runCatching { com.music.spotui.video.MusicVideoController.clearCache() }
+            runCatching { File(context.cacheDir, "updates").deleteRecursively() }
+            runCatching { File(context.cacheDir, "shared").deleteRecursively() }
+        }
+        withContext(Dispatchers.Main) {
+            if (app.myspoti.host.android.MyspotiRuntime::host.isInitialized)
+                runCatching { app.myspoti.host.android.MyspotiRuntime.host.clearCacheOnly() }
+        }
+    }
+
     private fun size(dir: File): Long = runCatching { dir.walk().filter { it.isFile }.sumOf { it.length() } }.getOrDefault(0L)
 }

@@ -1,0 +1,4 @@
+<resources>
+    <string name="settings_storage_clear_on_exit">退出时清除缓存</string>
+    <string name="settings_storage_clear_on_exit_detail">从最近任务关闭 Orpheon 时，清除媒体、视频、图片、歌词和应用缓存。下载和登录状态会保留。</string>
+</resources>

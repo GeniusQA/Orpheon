@@ -37,6 +37,13 @@ class MyspotiApplication : Application() {
                 AutoBrowser.children(context, parentId)
             override suspend fun search(query: String): List<MediaBrowserCompat.MediaItem> = AutoBrowser.search(query)
         }
+        PlaybackService.onExitClearCache = {
+            if (com.music.spotui.data.preferences.ClearCacheOnExitPref.on) {
+                app.myspoti.host.android.MyspotiRuntime.scope.launch {
+                    com.music.spotui.data.AppStorage.clearCachesForExit(applicationContext)
+                }
+            }
+        }
         // The report's header: the extensions installed, with their versions.
         app.myspoti.host.android.Logbook.headerExtras = {
             val all = com.music.spotui.extensions.Extensions.registry.value.extensions

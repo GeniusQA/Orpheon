@@ -1,0 +1,4 @@
+<resources>
+    <string name="settings_storage_clear_on_exit">Clear cache on exit</string>
+    <string name="settings_storage_clear_on_exit_detail">When Orpheon is closed from Recents, clear media, video, image, lyrics and app caches. Downloads and sign-in are kept.</string>
+</resources>

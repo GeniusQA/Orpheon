@@ -1,0 +1,4 @@
+<resources>
+    <string name="settings_storage_clear_on_exit">Borrar caché al salir</string>
+    <string name="settings_storage_clear_on_exit_detail">Al cerrar Orpheon desde Recientes, borra la caché de multimedia, vídeo, imágenes, letras y de la app. Las descargas y el inicio de sesión se conservan.</string>
+</resources>

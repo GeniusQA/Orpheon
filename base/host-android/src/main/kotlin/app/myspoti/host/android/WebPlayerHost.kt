@@ -708,6 +708,9 @@ class WebPlayerHost(private val context: Context) : BridgeHost {
         }
     }
 
+    /** Clears the WebView's disk cache only: sign-in cookies and web storage are kept. */
+    fun clearCacheOnly() = main.post { runCatching { view.clearCache(true) } }
+
     /**
      * Writes the session cookies to disk now. The WebView keeps them in memory and saves them a
      * while later: an app swiped away right after signing in (the exit log shows "SwipeUpClean" and

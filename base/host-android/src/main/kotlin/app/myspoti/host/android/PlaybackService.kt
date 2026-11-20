@@ -214,7 +214,9 @@ class PlaybackService : MediaBrowserServiceCompat() {
      * notification goes with the service.
      */
     override fun onTaskRemoved(rootIntent: Intent?) {
-        if (playingRemote || keepsPlayingOnClose(this)) {
+        val keepPlaying = keepsPlayingOnClose(this)
+        if (!playingRemote && !keepPlaying) onExitClearCache?.invoke()
+        if (playingRemote || keepPlaying) {
             if (current?.makesSound != true) stopSelf()
             return
         }
@@ -766,6 +768,9 @@ class PlaybackService : MediaBrowserServiceCompat() {
         private const val CLOSE_PREFS = "playback_service"
         private const val LOCK_TIMEOUT_MS = 6 * 60 * 60 * 1000L
         private const val KEEP_PLAYING_KEY = "keep_playing_on_close"
+
+        /** Set by the app layer: clears safe caches when the user closes Orpheon from Recents. */
+        var onExitClearCache: (() -> Unit)? = null
 
         /** The music goes on when the app is closed from the recent apps (off: it stops). */
         fun keepsPlayingOnClose(context: Context): Boolean =

@@ -227,6 +227,18 @@ object MusicVideoController {
         }
     }
 
+    /** Drops the video-match answers and temporary clip fragments; on exit, never during playback. */
+    fun clearCache() {
+        synchronized(cacheLock) {
+            recent.clear()
+            failedUntil.clear()
+            runCatching { cacheDir.deleteRecursively() }
+        }
+        app.cacheDir.listFiles { f ->
+            f.isFile && (f.name.startsWith("mv_ref_") || f.name.startsWith("mv_cand_") || f.name.startsWith("mv_full_"))
+        }?.forEach { runCatching { it.delete() } }
+    }
+
     init {
         // Once per start, a little after it, so it never competes with the first screen.
         scope.launch(Dispatchers.IO) { delay(15_000); runCatching { housekeeping() } }

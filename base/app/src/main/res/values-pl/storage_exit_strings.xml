@@ -1,0 +1,4 @@
+<resources>
+    <string name="settings_storage_clear_on_exit">Wyczyść pamięć podręczną przy wyjściu</string>
+    <string name="settings_storage_clear_on_exit_detail">Po zamknięciu Orpheon z ostatnich zadań czyści pamięć podręczną multimediów, wideo, obrazów, tekstów piosenek i aplikacji. Pobrane utwory i logowanie pozostają.</string>
+</resources>

@@ -1,0 +1,4 @@
+<resources>
+    <string name="settings_storage_clear_on_exit">Cancella cache all\'uscita</string>
+    <string name="settings_storage_clear_on_exit_detail">Alla chiusura di Orpheon dalle attività recenti, cancella le cache di media, video, immagini, testi e dell\'app. Download e accesso vengono mantenuti.</string>
+</resources>

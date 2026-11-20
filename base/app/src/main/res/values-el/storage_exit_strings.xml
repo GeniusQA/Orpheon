@@ -1,0 +1,4 @@
+<resources>
+    <string name="settings_storage_clear_on_exit">Εκκαθάριση κρυφής μνήμης κατά την έξοδο</string>
+    <string name="settings_storage_clear_on_exit_detail">Όταν κλείνετε το Orpheon από τις πρόσφατες εργασίες, διαγράφονται οι κρυφές μνήμες μέσων, βίντεο, εικόνων, στίχων και εφαρμογής. Οι λήψεις και η σύνδεση διατηρούνται.</string>
+</resources>

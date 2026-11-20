@@ -758,6 +758,7 @@ private fun StoragePage(back: () -> Unit) {
     var ask by remember { mutableStateOf(false) }
     var refresh by remember { mutableStateOf(0) }
     var clearing by remember { mutableStateOf(false) }
+    var clearOnExit by remember { mutableStateOf(com.music.spotui.data.preferences.ClearCacheOnExitPref.on) }
     val usage by androidx.compose.runtime.produceState<com.music.spotui.data.AppStorage.Usage?>(null, refresh) { value = storage.usage(ctx) }
     val size = android.text.format.Formatter.formatShortFileSize(ctx, com.music.spotui.data.offline.OfflineStore.totalBytes())
     val opened = storage.mediaCacheMbOpen
@@ -784,6 +785,17 @@ private fun StoragePage(back: () -> Unit) {
                             android.widget.Toast.makeText(ctx, ctx.getString(R.string.settings_storage_cleared), android.widget.Toast.LENGTH_SHORT).show()
                         }
                     },
+                )
+            }
+            row {
+                ImmersiveSwitchRow(
+                    stringResource(R.string.settings_storage_clear_on_exit),
+                    checked = clearOnExit,
+                    onChecked = {
+                        clearOnExit = it
+                        com.music.spotui.data.preferences.ClearCacheOnExitPref.set(ctx, it)
+                    },
+                    detail = stringResource(R.string.settings_storage_clear_on_exit_detail),
                 )
             }
         }
