@@ -606,10 +606,15 @@ fun LyricsScreen(
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                     com.music.spotui.ui.components.SkeletonLyrics(palette.highlight)
                 }
-            is LyricsViewModel.State.NotFound ->
+            is LyricsViewModel.State.NotFound -> {
+                LaunchedEffect(state) {
+                    com.music.spotui.ui.components.UserNotices.post(
+                        context.getString(R.string.lyrics_fullscreen_no_lyrics_error_version_two), long = true)
+                }
                 Box(Modifier.weight(1f).fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                     Text(stringResource(R.string.lyrics_fullscreen_no_lyrics_error_version_two), color = palette.highlight, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }
+            }
             is LyricsViewModel.State.Loaded -> {
                 val l = state.lyrics
                 // Lines Genius explains: lightly underlined, held to read the explanation.

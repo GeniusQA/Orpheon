@@ -1,6 +1,5 @@
 package com.music.spotui.ui.components
 
-import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -65,7 +64,7 @@ fun LyricsSourceSheet(onDismiss: () -> Unit, vm: LyricsViewModel = viewModel()) 
         asked = null
         if (vm.triedNothing.value == was) {
             val name = sources.firstOrNull { it.id == was }?.name ?: was
-            Toast.makeText(context, context.getString(R.string.lyrics_source_nothing, name), Toast.LENGTH_SHORT).show()
+            UserNotices.post(context.getString(R.string.lyrics_source_nothing, name), long = true)
         } else onDismiss()
     }
 

@@ -147,11 +147,14 @@ internal object ReferenceLyricSources {
     /** Spotify has no id in the TTML Hub index: map it to the ids the hub does carry. */
     private suspend fun lunaIds(track: LyricsApi.Track): Set<String> {
         val ids = LinkedHashSet<String>()
-        if (track.trackId.isNotBlank()) runCatching {
-            app.myspoti.host.android.MyspotiRuntime.api.isrc(android.net.Uri.parse("spotify:track:${track.trackId}"))
-        }.getOrNull<String>()?.trim()?.takeIf { it.isNotEmpty() }?.let { isrc ->
-            ids += isrc.uppercase(Locale.ROOT)
-            ids += isrc.lowercase(Locale.ROOT)
+        if (track.trackId.isNotBlank()) {
+            val isrc: String? = try {
+                app.myspoti.host.android.MyspotiRuntime.api.isrc(android.net.Uri.parse("spotify:track:${track.trackId}"))
+            } catch (_: Exception) { null }
+            isrc?.trim()?.takeIf { it.isNotEmpty() }?.let { found ->
+                ids += found.uppercase(Locale.ROOT)
+                ids += found.lowercase(Locale.ROOT)
+            }
         }
         ids += itunesIds(track)
         runCatching { qqSearch(track) }.getOrNull()?.let { candidates ->

@@ -196,15 +196,21 @@ fun ImmersiveLyricsPanel(
         is LyricsViewModel.State.Loading -> LyricsSkeleton(
             modifier.padding(contentPadding).padding(horizontal = Immersive.Gutter),
         )
-        is LyricsViewModel.State.NotFound -> Box(
-            modifier.padding(contentPadding).padding(horizontal = Immersive.Gutter),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = stringResource(R.string.immersive_lyrics_none),
-                style = Immersive.Headline,
-                color = Immersive.TextSecondary,
-            )
+        is LyricsViewModel.State.NotFound -> {
+            LaunchedEffect(current) {
+                com.music.spotui.ui.components.UserNotices.post(
+                    com.music.spotui.di.Graph.app.getString(R.string.immersive_lyrics_none), long = true)
+            }
+            Box(
+                modifier.padding(contentPadding).padding(horizontal = Immersive.Gutter),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = stringResource(R.string.immersive_lyrics_none),
+                    style = Immersive.Headline,
+                    color = Immersive.TextSecondary,
+                )
+            }
         }
         is LyricsViewModel.State.Loaded -> {
             // A new track starts the list over: its scroll position and handover state belong to
