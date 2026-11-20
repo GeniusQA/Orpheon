@@ -77,7 +77,7 @@ import com.music.spotui.ui.screens.shareDiagnosticReport
 import kotlinx.coroutines.launch
 
 /** Where the Immersive Settings are: the list of categories, one category, or a choice inside it. */
-private enum class SettingsPage { Root, Playback, Sources, Lyrics, StreamingWifi, StreamingCell, Crossfade, Downloads, DownloadQuality, Storage, Data, Display, Look, Rotation, Language, LyricsLanguage, App, Accounts, Library }
+private enum class SettingsPage { Root, Playback, Sources, Lyrics, LyricsSources, StreamingWifi, StreamingCell, Crossfade, Downloads, DownloadQuality, Storage, Data, Display, Look, Rotation, Language, LyricsLanguage, App, Accounts, Library }
 
 private val StreamingChoices = listOf(
     Triple(StreamingQuality.AUTO, R.string.quality_streaming_auto, R.string.quality_streaming_auto_detail),
@@ -139,6 +139,7 @@ fun ImmersiveSettingsScreen(navController: NavController) {
             SettingsPage.Playback -> PlaybackPage(navController, open, back)
             SettingsPage.Sources -> SourcesPage(navController, back)
             SettingsPage.Lyrics -> LyricsPage(open, back)
+            SettingsPage.LyricsSources -> LyricsSourcesPage(back)
             SettingsPage.StreamingWifi -> StreamingPage(cellular = false, back)
             SettingsPage.StreamingCell -> StreamingPage(cellular = true, back)
             SettingsPage.Crossfade -> CrossfadePage(back)
@@ -457,7 +458,6 @@ private fun LibraryPage(navController: NavController, back: () -> Unit) {
 private fun LyricsPage(open: (SettingsPage) -> Unit, back: () -> Unit) {
     val ctx = LocalContext.current
     var wordSync by remember { mutableStateOf(com.music.spotui.data.preferences.isLyricsWordSync(ctx)) }
-    var lyricsExtra by remember { mutableStateOf(com.music.spotui.data.preferences.isLyricsExtraSources(ctx)) }
     ImmersivePage(title = stringResource(R.string.settings_section_lyrics), onBack = back) {
         immersiveGroup("lyrics") {
             // Lyrics: word by word (karaoke) first, or line by line with Spotify's first.
@@ -475,16 +475,11 @@ private fun LyricsPage(open: (SettingsPage) -> Unit, back: () -> Unit) {
             }
             // NetEase and Genius after Spotify and LRCLIB (also in the lyrics' own menu).
             row {
-                ImmersiveSwitchRow(
-                    stringResource(R.string.lyrics_extra_title), checked = lyricsExtra,
-                    onChecked = {
-                        lyricsExtra = it
-                        com.music.spotui.data.preferences.setLyricsExtraSources(ctx, it)
-                        com.music.spotui.data.api.LyricsApi.extraSources = it
-                        com.music.spotui.data.api.LyricsApi.extraSourcesOff = !it
-                        com.music.spotui.data.api.LyricsApi.forgetAll()
-                    },
+                ImmersiveGroupRow(
+                    stringResource(R.string.lyrics_extra_title),
                     detail = stringResource(R.string.lyrics_extra_summary),
+                    chevron = true,
+                    onClick = { open(SettingsPage.LyricsSources) },
                 )
             }
             // Genius: the meaning of songs and the notes on their lines, and its lyrics as a last resort.
