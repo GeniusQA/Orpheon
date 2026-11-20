@@ -45,7 +45,7 @@ class LyricsViewModel constructor() : ViewModel() {
 
     private var loadedKey: String? = null
     /** Local songs only: the last lyrics for which translation was asked automatically. */
-    private var autoTranslated: Pair<String, Lyrics>? = null
+    private var autoTranslated: Pair<String?, Lyrics>? = null
 
     init {
         // Romanizations an extension gave after the lyrics showed join the lines still shown.
