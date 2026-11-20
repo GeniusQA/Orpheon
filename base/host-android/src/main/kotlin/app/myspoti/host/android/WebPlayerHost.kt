@@ -205,13 +205,6 @@ class WebPlayerHost(private val context: Context) : BridgeHost {
     /** Fetches the audio files itself: the last request the WebView would stamp with its package. */
     private val media = MediaProxy(MediaProxy.client()) { relay.identityPair() }
 
-    /** Sign-in requests leave here when this WebView cannot suppress X-Requested-With. */
-    private val login = LoginProxy(
-        client = LoginProxy.client(),
-        identity = { relay.identityPair() },
-        cookies = { cookies() },
-    )
-
     /**
      * WebView profiles (androidx.webkit MULTI_PROFILE): each account keeps its own cookies and Web
      * storage, so several stay signed in at once. Without them (an older WebView) the page holds one
@@ -354,9 +347,6 @@ class WebPlayerHost(private val context: Context) : BridgeHost {
                 if (url.startsWith("https://accounts.spotify.com/")) {
                     loginSteps++
                     Logbook.log("login step #$loginSteps ${request.method} ${url.substringAfter("accounts.spotify.com").substringBefore('?').take(90)}")
-                    val proxied = login.fetch(request)
-                    if (proxied != null) return proxied
-                    Logbook.log("sign-in proxy failed, the WebView fetches it: ${Logbook.noQuery(url).take(110)}")
                 }
                 // The music itself: fetched here, so the WebView's own package-name header never
                 // travels with it (see MediaProxy).
@@ -372,6 +362,12 @@ class WebPlayerHost(private val context: Context) : BridgeHost {
             }
 
             override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
+                if (mobileLoginBrowser && android.net.Uri.parse(url).host == PLAYER_HOST) {
+                    configurePlayerBrowser(view)
+                    view.stopLoading()
+                    view.loadUrl(PLAYER_URL)
+                    return
+                }
                 Logbook.log("page start ${Logbook.noQuery(url).take(120)}")
                 mainFrameFailed = false
                 // A "finished" comes just before the player's document starts: its wait must not run out on a
@@ -809,9 +805,43 @@ class WebPlayerHost(private val context: Context) : BridgeHost {
 
     private var loginProbes = 0
     private var loginReloaded = false
+    private var mobileLoginBrowser = false
+
+    /** Back to the desktop Web Player identity after sign-in (Revera's login-browser approach). */
+    private fun configurePlayerBrowser(target: WebView) {
+        mobileLoginBrowser = false
+        target.settings.userAgentString = fingerprint.userAgent
+        if (androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.USER_AGENT_METADATA)) {
+            val brands = fingerprint.brands.map {
+                androidx.webkit.UserAgentMetadata.BrandVersion.Builder().setBrand(it.name).setMajorVersion(it.major).setFullVersion(it.fullVersion).build()
+            }
+            androidx.webkit.WebSettingsCompat.setUserAgentMetadata(target.settings, androidx.webkit.UserAgentMetadata.Builder()
+                .setBrandVersionList(brands).setFullVersion(fingerprint.fullVersion).setPlatform("Linux")
+                .setPlatformVersion(fingerprint.kernel).setArchitecture("x86").setBitness(64)
+                .setMobile(false).setModel("").setWow64(false).build())
+        }
+    }
+
+    /** Spotify's account pages accept a real Chrome-on-Android identity better than the desktop one. */
+    private fun configureLoginBrowser() {
+        mobileLoginBrowser = true
+        view.settings.userAgentString = WebSettings.getDefaultUserAgent(context)
+            .replace("; wv", "").replace(" Version/4.0", "")
+        if (androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.USER_AGENT_METADATA)) {
+            val match = Regex("Chrome/([0-9.]+)").find(view.settings.userAgentString)?.groupValues?.get(1) ?: "124.0.0.0"
+            val brands = listOf("Chromium", "Google Chrome").map {
+                androidx.webkit.UserAgentMetadata.BrandVersion.Builder().setBrand(it).setMajorVersion(match.substringBefore('.')).setFullVersion(match).build()
+            }
+            androidx.webkit.WebSettingsCompat.setUserAgentMetadata(view.settings, androidx.webkit.UserAgentMetadata.Builder()
+                .setBrandVersionList(brands).setFullVersion(match).setPlatform("Android")
+                .setPlatformVersion(android.os.Build.VERSION.RELEASE).setArchitecture("arm")
+                .setBitness(64).setMobile(true).setModel(android.os.Build.MODEL).setWow64(false).build())
+        }
+    }
 
     /** The sign-in page was asked for: kept out of sight, with its clocks running, until it has content. */
     private fun beginLoginLoad() {
+        configureLoginBrowser()
         loginProbes = 0
         loginReloaded = false
         main.removeCallbacks(loginProbe)
