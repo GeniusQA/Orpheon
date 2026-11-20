@@ -205,6 +205,9 @@ class WebPlayerHost(private val context: Context) : BridgeHost {
     /** Fetches the audio files itself: the last request the WebView would stamp with its package. */
     private val media = MediaProxy(MediaProxy.client()) { relay.identityPair() }
 
+    /** Sign-in requests leave here when this WebView cannot suppress X-Requested-With. */
+    private val login = LoginProxy(LoginProxy.client()) { relay.identityPair() } { cookies() }
+
     /**
      * WebView profiles (androidx.webkit MULTI_PROFILE): each account keeps its own cookies and Web
      * storage, so several stay signed in at once. Without them (an older WebView) the page holds one
@@ -347,6 +350,9 @@ class WebPlayerHost(private val context: Context) : BridgeHost {
                 if (url.startsWith("https://accounts.spotify.com/")) {
                     loginSteps++
                     Logbook.log("login step #$loginSteps ${request.method} ${url.substringAfter("accounts.spotify.com").substringBefore('?').take(90)}")
+                    val proxied = login.fetch(request)
+                    if (proxied != null) return proxied
+                    Logbook.log("sign-in proxy failed, the WebView fetches it: ${Logbook.noQuery(url).take(110)}")
                 }
                 // The music itself: fetched here, so the WebView's own package-name header never
                 // travels with it (see MediaProxy).
