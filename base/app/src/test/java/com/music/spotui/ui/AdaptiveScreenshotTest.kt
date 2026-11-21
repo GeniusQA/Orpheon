@@ -629,15 +629,17 @@ abstract class AdaptiveScreenshotTest(private val size: String) {
         rule.mainClock.advanceTimeBy(1_000)
         // Some rows above the ones seen, for the list to run up to: header, now playing and its
         // heading, the context's heading, then the songs (Song 09 first).
-        rule.onNodeWithTag("queue").performScrollToIndex(12)
+        // The queue has a variable number of rows above the songs (source picker, moods, headings),
+        // so anchor the test on the song itself instead of a fixed list index.
+        rule.onAllNodes(androidx.compose.ui.test.hasText("Song 11"), useUnmergedTree = true)
+            .fetchSemanticsNodes().firstOrNull()?.let {
+                rule.onNodeWithTag("queue").performScrollToNode(androidx.compose.ui.test.hasText("Song 11"))
+            } ?: rule.onNodeWithTag("queue").performScrollToIndex(12)
         rule.mainClock.advanceTimeBy(500)
         val d = rule.activity.resources.displayMetrics.density
-        val handles = rule.onAllNodes(androidx.compose.ui.test.hasContentDescription("Move in queue"), useUnmergedTree = true)
-            .fetchSemanticsNodes().map { it.boundsInRoot }.filter { it.top > 110 * d }.sortedBy { it.top }
-        // The third row seen: the finger then goes over two rows and out of the list.
-        val from = handles[2].center
         val title = rule.onAllNodes(androidx.compose.ui.test.hasText("Song 11"), useUnmergedTree = true)
             .fetchSemanticsNodes().first().boundsInRoot
+        val from = androidx.compose.ui.geometry.Offset(title.center.x, title.center.y)
         org.junit.Assert.assertTrue("Song 11 is the third row seen", kotlin.math.abs(title.center.y - from.y) < 24 * d)
         rule.onRoot().performTouchInput { down(from) }
         rule.mainClock.advanceTimeByFrame()
