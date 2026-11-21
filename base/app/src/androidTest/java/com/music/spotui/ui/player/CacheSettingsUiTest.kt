@@ -28,7 +28,7 @@ class CacheSettingsUiTest {
                     if (immersive) com.music.spotui.ui.immersive.pages.StoragePage {}
                     else Column { com.music.spotui.ui.screens.StorageRows() }
                 } }
-                val title = context.getString(app.myspoti.engine.R.string.settings_storage_clear_on_start)
+                val title = context.getString(app.myspoti.engine.R.string.settings_storage_clear_on_exit)
                 for (on in listOf(true, false)) {
                     val deadline = System.currentTimeMillis() + 10000
                     var clicked = false

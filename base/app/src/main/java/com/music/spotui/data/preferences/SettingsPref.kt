@@ -82,18 +82,6 @@ object AutoplayPref {
     }
 }
 
-/** "Clear caches when the app is closed from Recents" (off by default). */
-object ClearCacheOnExitPref {
-    private const val KEY = "clear_cache_on_exit"
-    var on by androidx.compose.runtime.mutableStateOf(prefs(com.music.spotui.di.Graph.app).getBoolean(KEY, false))
-        private set
-
-    fun set(c: Context, value: Boolean) {
-        on = value
-        prefs(c).edit().putBoolean(KEY, value).apply()
-    }
-}
-
 /**
  * "Myspoti shuffle" (on by default: Spotify's replayed songs before the end of the list, reported): with shuffle on, a list plays every one of its songs once, in
  * an order Myspoti draws, before it starts over, instead of Spotify's shuffle (see

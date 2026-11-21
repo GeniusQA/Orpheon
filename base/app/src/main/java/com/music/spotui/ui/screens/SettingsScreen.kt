@@ -1120,11 +1120,10 @@ internal fun StorageRows() {
     val storage = com.music.spotui.data.AppStorage
     var refresh by remember { mutableStateOf(0) }
     var clearing by remember { mutableStateOf(false) }
-    var clearOnExit by remember { mutableStateOf(com.music.spotui.data.preferences.ClearCacheOnExitPref.on) }
     val usage by androidx.compose.runtime.produceState<com.music.spotui.data.AppStorage.Usage?>(null, refresh) { value = storage.usage(ctx) }
     OptionRow(
-        label = stringResource(R.string.settings_storage_clear_on_start),
-        detail = stringResource(R.string.settings_storage_clear_on_start_detail),
+        label = stringResource(R.string.settings_storage_clear_on_exit),
+        detail = stringResource(R.string.settings_storage_clear_on_exit_detail),
         checked = storage.clearMediaOnNewSession,
         onChecked = storage::chooseClearMediaOnNewSession,
     )
@@ -1166,15 +1165,6 @@ internal fun StorageRows() {
             color = AppMuted, fontSize = 12.sp,
         )
     }
-    OptionRow(
-        label = stringResource(R.string.settings_storage_clear_on_exit),
-        detail = stringResource(R.string.settings_storage_clear_on_exit_detail),
-        checked = clearOnExit,
-        onChecked = {
-            clearOnExit = it
-            com.music.spotui.data.preferences.ClearCacheOnExitPref.set(ctx, it)
-        },
-    )
 }
 
 /** "Remove all downloads", with the space they take; asks first, like the official app. */
