@@ -3529,10 +3529,10 @@ object SongPlayer {
     @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     internal fun mediaCache(context: Context): androidx.media3.datasource.cache.SimpleCache =
         mediaCache ?: synchronized(this) {
-            mediaCache ?: androidx.media3.datasource.cache.SimpleCache(
-                java.io.File(context.cacheDir, "media"),
-                androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor(com.music.spotui.data.AppStorage.mediaCacheLimit()),
-                androidx.media3.database.StandaloneDatabaseProvider(context),
+            mediaCache ?: com.music.spotui.data.MediaCacheStartup.open(
+                context,
+                com.music.spotui.data.MediaCacheStartup.clearPreviousSession,
+                com.music.spotui.data.AppStorage.mediaCacheLimit(),
             ).also { mediaCache = it }
         }
 }

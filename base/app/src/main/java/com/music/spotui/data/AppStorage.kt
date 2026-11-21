@@ -40,6 +40,16 @@ object AppStorage {
         Graph.app.getSharedPreferences(PREFS, 0).edit().putInt(KEY_MEDIA_MB, mb).apply()
     }
 
+    /** Separate from "clear on exit": discard temporary media the next time its cache is opened. */
+    var clearMediaOnNewSession by mutableStateOf(
+        Graph.app.getSharedPreferences(PREFS, 0).getBoolean("clear_media_on_new_session", false))
+        private set
+
+    fun chooseClearMediaOnNewSession(on: Boolean) {
+        clearMediaOnNewSession = on
+        Graph.app.getSharedPreferences(PREFS, 0).edit().putBoolean("clear_media_on_new_session", on).apply()
+    }
+
     /** The media cache's limit in bytes, read once when the cache is opened. */
     fun mediaCacheLimit(): Long = mediaCacheMb.also { mediaCacheMbOpen = it } * 1024L * 1024
 

@@ -24,6 +24,8 @@ class MyspotiApplication : Application() {
         // A crash or a freeze of the last run, back in this run's diagnostic report.
         app.myspoti.host.android.LastExit.install(this)
         app.myspoti.power.EnergySettings.init(this)
+        // Capture the next-session media cleanup before playback can open its cache.
+        com.music.spotui.data.MediaCacheStartup.prepareSession(this)
         // Spotify session (hidden Web Player + API), caches, downloads, data saver.
         Graph.init(this)
         SongPlayer.attachEngine(Graph.currentSongState)

@@ -1114,7 +1114,7 @@ internal fun cacheSizeLabel(mb: Int): String =
 
 /** Storage: the media cache's size (applied when the app starts again) and the caches' space, with a button that empties them. */
 @Composable
-private fun StorageRows() {
+internal fun StorageRows() {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val storage = com.music.spotui.data.AppStorage
@@ -1122,6 +1122,12 @@ private fun StorageRows() {
     var clearing by remember { mutableStateOf(false) }
     var clearOnExit by remember { mutableStateOf(com.music.spotui.data.preferences.ClearCacheOnExitPref.on) }
     val usage by androidx.compose.runtime.produceState<com.music.spotui.data.AppStorage.Usage?>(null, refresh) { value = storage.usage(ctx) }
+    OptionRow(
+        label = stringResource(R.string.settings_storage_clear_on_start),
+        detail = stringResource(R.string.settings_storage_clear_on_start_detail),
+        checked = storage.clearMediaOnNewSession,
+        onChecked = storage::chooseClearMediaOnNewSession,
+    )
     androidx.compose.foundation.layout.Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp)) {
         Text(stringResource(R.string.settings_storage_media_cache), color = AppText, fontSize = 16.sp)
         val open = storage.mediaCacheMbOpen

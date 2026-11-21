@@ -794,7 +794,7 @@ private fun DownloadsPage(navController: NavController, open: (SettingsPage) -> 
 
 /** What the app keeps on the phone: the media cache's size, the caches (emptied here) and the downloads. */
 @Composable
-private fun StoragePage(back: () -> Unit) {
+internal fun StoragePage(back: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val storage = com.music.spotui.data.AppStorage
@@ -814,6 +814,14 @@ private fun StoragePage(back: () -> Unit) {
             }
         }
         immersiveGroup("caches") {
+            row {
+                ImmersiveSwitchRow(
+                    stringResource(R.string.settings_storage_clear_on_start),
+                    checked = storage.clearMediaOnNewSession,
+                    onChecked = storage::chooseClearMediaOnNewSession,
+                    detail = stringResource(R.string.settings_storage_clear_on_start_detail),
+                )
+            }
             row {
                 ImmersiveGroupRow(
                     stringResource(R.string.settings_storage_clear_cache),
