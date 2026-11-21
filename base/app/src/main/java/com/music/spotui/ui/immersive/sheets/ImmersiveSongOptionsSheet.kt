@@ -105,7 +105,7 @@ fun ImmersiveSongOptionsSheet(
         ImmersiveMeaningSheet(song.spotifyTrackId, song.title, song.singer, null, coverUrl = song.coverUri) { showMeaning = false; onDismiss() }
         return
     }
-    if (showSpeed) { SpeedSheet(onDismiss = { showSpeed = false; onDismiss() }); return }
+    if (showSpeed) { SpeedSheet(episode = song.url.startsWith("episode:"), onDismiss = { showSpeed = false; onDismiss() }); return }
     if (showSavedIn) { SavedInSheet(song = song, context = context, onDismiss = { showSavedIn = false; onDismiss() }); return }
     if (showAddTo) {
         AddToPlaylistSheet(song = song, context = context, onDismiss = { showAddTo = false; onDismiss() }, excludePlaylistId = currentPlaylistId)
@@ -308,7 +308,8 @@ fun ImmersiveSongOptionsSheet(
                 onDismiss()
             }
         }
-        if (nowPlaying && song.url.startsWith("episode:")) {
+        if (nowPlaying && (song.url.startsWith("episode:") ||
+                (com.music.spotui.di.LocalPlayer.active.value && !com.music.spotui.cast.CastPlayback.active && !isRadio))) {
             ImmersiveSheetRow(Icons.Rounded.Speed, stringResource(R.string.playback_speed)) { showSpeed = true }
         }
         // The app's own playback (extensions, downloads, files): its equalizer, speed and silences.

@@ -344,7 +344,9 @@ class SpotifyPlayer(private val bridge: Bridge, private val scope: CoroutineScop
                 // Only when this page is Connect's active device: the volume is that device's
                 // otherwise, and a speaker at 0 (muted for its ad, not reported yet) went to 100 %
                 // (#159). A page not active yet is looked after by the guard once it plays here.
-                runCatching { if (volume() == 0.0 && ownsConnectVolume(readMedia())) setVolume(wantedVolume?.takeIf { v -> v > 0.0 } ?: 1.0) }
+                wantedVolume?.takeIf { it > 0.0 }?.let { level ->
+                    runCatching { if (volume() == 0.0 && ownsConnectVolume(readMedia())) setVolume(level) }
+                }
             }
         }
     }
@@ -952,14 +954,13 @@ class SpotifyPlayer(private val bridge: Bridge, private val scope: CoroutineScop
             bridge.logger?.invoke("media element muted during a song: unmuted")
             applyQuiet()
         }
-        val wanted = wantedVolume ?: 1.0
-        if (wanted <= 0.0) return
+        val wanted = wantedVolume
         // The page's own volume is read with the media element (one call, no second round trip).
         val v = media?.playerVolume ?: runCatching { volume() }.getOrNull() ?: return
         // Set through Connect: only when this page is known to be the active device. Right after a
         // transfer the element has not stopped yet (so [remoteActive] is still false) while the
         // volume read is the speaker's, and a speaker reporting 0 was set to 100 % (#159).
-        if (v <= 0.0 && ownsConnectVolume(media)) {
+        if (wanted != null && wanted > 0.0 && v <= 0.0 && ownsConnectVolume(media)) {
             bridge.logger?.invoke("page silent during a song: volume back to $wanted")
             runCatching { setVolume(wanted) }
         }

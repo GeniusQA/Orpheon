@@ -378,14 +378,28 @@ fun ImmersiveEpisodeScreen(navController: NavController, episodeId: String, fall
 fun ImmersiveQueueScreen(navController: NavController) {
     // Spotify's real queue, pushed by the engine.
     val q by SongPlayer.engineQueue
+    var query by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
+    val term = query.trim()
+    fun matches(row: SongPlayer.QueueItem) = row.song.title.contains(term, true) || row.song.singer.contains(term, true)
+    val queued = remember(q.queued, term) { q.queued.filter(::matches) }
+    val next = remember(q.nextUp, term) { q.nextUp.filter(::matches) }
     ImmersivePage(title = stringResource(R.string.action_queue_label), onBack = { navController.popBackStack() }) {
+        item(key = "filter:queue") {
+            androidx.compose.material3.OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                singleLine = true,
+                label = { Text(stringResource(R.string.add_songs_search_hint)) },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
         q.current?.let { cur ->
             item(key = "now:header") { SectionHeader(stringResource(R.string.default_notification_channel_name)) }
             item(key = "now") { ImmersiveSongRow(song = cur, playing = true, onClick = {}, onMore = null) }
         }
-        if (q.queued.isNotEmpty()) {
+        if (queued.isNotEmpty()) {
             item(key = "queued:header") { SectionHeader(stringResource(R.string.next_in_queue)) }
-            itemsIndexed(q.queued, key = { i, it -> "q" + i + it.uid + it.uri }) { _, item ->
+            itemsIndexed(queued, key = { i, it -> "q" + i + it.uid + it.uri }) { _, item ->
                 Column(immersiveItemPlacement()) {
                     ImmersiveSwipeToRemove(item.uid + item.uri, onRemove = { SongPlayer.removeFromQueue(item) }) {
                         Box(Modifier.background(Immersive.Page)) { ImmersiveSongRow(song = item.song, playing = false, onClick = { SongPlayer.skipTo(item) }, onMore = null) }
@@ -393,9 +407,9 @@ fun ImmersiveQueueScreen(navController: NavController) {
                 }
             }
         }
-        if (q.nextUp.isNotEmpty()) {
+        if (next.isNotEmpty()) {
             item(key = "next:header") { SectionHeader(stringResource(R.string.next_up)) }
-            itemsIndexed(q.nextUp, key = { i, it -> "n" + i + it.uid + it.uri }) { _, item ->
+            itemsIndexed(next, key = { i, it -> "n" + i + it.uid + it.uri }) { _, item ->
                 Column(immersiveItemPlacement()) {
                     ImmersiveSwipeToRemove(item.uid + item.uri, onRemove = { SongPlayer.removeFromQueue(item) }) {
                         Box(Modifier.background(Immersive.Page)) { ImmersiveSongRow(song = item.song, playing = false, onClick = { SongPlayer.skipTo(item) }, onMore = null) }

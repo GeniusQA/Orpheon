@@ -64,6 +64,11 @@ import com.music.spotui.ui.theme.AppPalette
 fun QueueScreen(navController: NavController) {
     // Spotify's real queue, pushed by the engine.
     val q by SongPlayer.engineQueue
+    var query by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf("") }
+    val term = query.trim()
+    fun matches(row: SongPlayer.QueueItem) = row.song.title.contains(term, ignoreCase = true) || row.song.singer.contains(term, ignoreCase = true)
+    val queued = remember(q.queued, term) { q.queued.filter(::matches) }
+    val upcoming = remember(q.nextUp, term) { q.nextUp.filter(::matches) }
 
     Column(
         modifier = Modifier
@@ -92,6 +97,13 @@ fun QueueScreen(navController: NavController) {
             Text(stringResource(R.string.action_queue_label), color = AppText, fontSize = 18.sp, fontWeight = FontWeight.Bold)
         }
 
+        androidx.compose.material3.OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            singleLine = true,
+            label = { Text(stringResource(R.string.add_songs_search_hint)) },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        )
         LazyColumn(
             contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 32.dp),
             modifier = Modifier
@@ -106,18 +118,18 @@ fun QueueScreen(navController: NavController) {
             }
             // Keyed by song and occurrence (as the Immersive queue): a row removed or played lets
             // the ones under it slide up instead of every row after it being drawn anew.
-            val keys = queueKeys(q.queued + q.nextUp)
-            if (q.queued.isNotEmpty()) {
+            val keys = queueKeys(queued + upcoming)
+            if (queued.isNotEmpty()) {
                 item(key = "heading-queued") { QueueHeader(stringResource(R.string.next_in_queue), animatedRow()) }
-                itemsIndexed(q.queued, key = { i, _ -> keys[i] }) { _, item ->
+                itemsIndexed(queued, key = { i, _ -> keys[i] }) { _, item ->
                     Box(animatedRow()) {
                         SwipeRemove(item) { QueueRow(song = item.song, highlight = false, onClick = { SongPlayer.skipTo(item) }) }
                     }
                 }
             }
-            if (q.nextUp.isNotEmpty()) {
+            if (upcoming.isNotEmpty()) {
                 item(key = "heading-next") { QueueHeader(stringResource(R.string.next_up), animatedRow()) }
-                itemsIndexed(q.nextUp, key = { i, _ -> keys[q.queued.size + i] }) { _, item ->
+                itemsIndexed(upcoming, key = { i, _ -> keys[queued.size + i] }) { _, item ->
                     Box(animatedRow()) {
                         SwipeRemove(item) { QueueRow(song = item.song, highlight = false, onClick = { SongPlayer.skipTo(item) }) }
                     }

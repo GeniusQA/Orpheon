@@ -95,6 +95,8 @@ class MainActivity : AppCompatActivity() {
     private var accountChosen by mutableStateOf(false)
     /** On the account choice, between the welcome screen and any sign-in. */
     private var choosingAccount by mutableStateOf(false)
+    /** The sign-in was opened from the first-run account choice; Back returns there. */
+    private var returnToAccountChoice = false
     /** In the picture-in-picture window: only the music video (or, with [pipSong], the song card) is drawn. */
     private var inPip by mutableStateOf(false)
     /** The window holds the song ([com.music.spotui.ui.components.SongPip]), not the music video. */
@@ -247,22 +249,27 @@ class MainActivity : AppCompatActivity() {
         watchLoginReturn()
         watchLogout()
         watchSwitch()
-        // On the sign-in page of an added account (or of one whose session was gone), back goes to
-        // the account used before instead of leaving the app on a page with no account.
-        // Enabled only then, so back keeps its system behaviour (and its predictive animation) elsewhere.
-        val backToAccount = object : androidx.activity.OnBackPressedCallback(false) {
+        // Back from any sign-in screen cancels the wait, keeps the previous account when there is
+        // one, and leaves the sign-in display; a first-run login goes back to the account choice.
+        val backFromLogin = object : androidx.activity.OnBackPressedCallback(showingLogin) {
             override fun handleOnBackPressed() {
-                if (!com.music.spotui.di.SessionActions.backToPreviousAccount(this@MainActivity)) return
-                MyspotiRuntime.host.accounts.list.value.current?.name?.let {
-                    android.widget.Toast.makeText(this@MainActivity, getString(R.string.accounts_back_to, it), android.widget.Toast.LENGTH_SHORT).show()
+                loginWait?.cancel()
+                connecting = false
+                val canRestoreAccount = MyspotiRuntime.host.multiProfile &&
+                    MyspotiRuntime.host.accounts.list.value.others.isNotEmpty()
+                if (canRestoreAccount && com.music.spotui.di.SessionActions.backToPreviousAccount(this@MainActivity)) {
+                    MyspotiRuntime.host.accounts.list.value.current?.name?.let {
+                        android.widget.Toast.makeText(this@MainActivity, getString(R.string.accounts_back_to, it), android.widget.Toast.LENGTH_SHORT).show()
+                    }
                 }
+                hideLogin()
+                choosingAccount = returnToAccountChoice
+                returnToAccountChoice = false
             }
         }
-        onBackPressedDispatcher.addCallback(this, backToAccount)
+        onBackPressedDispatcher.addCallback(this, backFromLogin)
         lifecycleScope.launch {
-            combine(androidx.compose.runtime.snapshotFlow { showingLogin && !connecting }, MyspotiRuntime.host.accounts.list) { login, list ->
-                login && MyspotiRuntime.host.multiProfile && list.others.isNotEmpty()
-            }.collect { backToAccount.isEnabled = it }
+            androidx.compose.runtime.snapshotFlow { showingLogin }.collect { backFromLogin.isEnabled = it }
         }
         // Only on a fresh start: on recreation (theme, locale, process restore)
         // the same intent would play its link again. New links arrive in onNewIntent.
@@ -430,7 +437,10 @@ class MainActivity : AppCompatActivity() {
         val provider = com.music.spotui.data.preferences.AccountProviderPref.id
         Logbook.log("onboarding: music account $provider chosen before any sign-in")
         if (com.music.spotui.ui.screens.Onboarding.afterChoice(provider, com.music.spotui.di.YtmRuntime.signedIn) ==
-            com.music.spotui.ui.screens.AfterChoice.SPOTIFY_SIGN_IN) showLogin()
+            com.music.spotui.ui.screens.AfterChoice.SPOTIFY_SIGN_IN) {
+            returnToAccountChoice = true
+            showLogin()
+        }
     }
 
     /** Spotify's login page, full screen, until the Web Player comes back signed in. */

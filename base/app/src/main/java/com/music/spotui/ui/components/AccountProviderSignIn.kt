@@ -15,6 +15,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -46,7 +48,11 @@ fun accountProviderLabel(id: String): String = when (id) {
  */
 @Composable
 fun YtmSignInDialog(onDismiss: () -> Unit) {
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+    val webView = remember { mutableStateOf<android.webkit.WebView?>(null) }
+    Dialog(onDismissRequest = {
+        val web = webView.value
+        if (web != null && web.canGoBack()) web.goBack() else onDismiss()
+    }, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         Column(Modifier.fillMaxSize().background(Color(0xFF121212)).statusBarsPadding().navigationBarsPadding().imePadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onDismiss) {
@@ -60,9 +66,12 @@ fun YtmSignInDialog(onDismiss: () -> Unit) {
                     YtmRuntime.host.signInView(ctx, Ytm.SIGN_IN_URL, finished = Ytm::signInDone, signedIn = Ytm::signedIn) { ok ->
                         YtmRuntime.signInFinished(ok)
                         onDismiss()
-                    }
+                    }.also { webView.value = it }
                 },
-                onRelease = { it.destroy() },
+                onRelease = {
+                    webView.value = null
+                    it.destroy()
+                },
             )
         }
     }

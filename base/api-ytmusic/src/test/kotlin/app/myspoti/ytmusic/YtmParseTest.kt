@@ -33,6 +33,16 @@ class YtmParseTest {
         assertEquals("TOKEN-PAGE-2", YtmParse.continuation(a))
     }
 
+    @Test fun `home preserves shelf title and removes repeated recommendations`() {
+        val row = YtmParse.deep(fixture("liked"), "musicResponsiveListItemRenderer").first()
+        val wrapped = JsonObject(mapOf("musicResponsiveListItemRenderer" to row))
+        val shelf = Json.parseToJsonElement("""{"header":{"musicCarouselShelfBasicHeaderRenderer":{"title":{"runs":[{"text":"Quick picks"}]}}}}""").jsonObject
+        val carousel = JsonObject(shelf + ("contents" to kotlinx.serialization.json.JsonArray(listOf(wrapped, wrapped))))
+        val result = YtmParse.home(JsonObject(mapOf("musicCarouselShelfRenderer" to carousel))).single()
+        assertEquals("Quick picks", result.title)
+        assertEquals("Song One", (result.items.single() as Item.Song).track.name)
+    }
+
     @Test fun `a continuation answer, without podcast episodes`() {
         val more = YtmParse.rows(fixture("liked-more")).filterIsInstance<Item.Song>().map { it.track.uri }
         assertEquals(listOf("ytmusic:track:vidAAAAAAA3"), more)

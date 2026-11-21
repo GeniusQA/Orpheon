@@ -35,6 +35,9 @@ class YtmAccount(
     val library = YtmLibrary(api)
     val metadata = YtmMetadata(api)
 
+    /** Home's recommendation shelves, in the order YouTube Music shows them. */
+    suspend fun recommendations(): List<YtmParse.RecommendationShelf> = YtmParse.home(api.browse("FEmusic_home"))
+
     private val _signedIn = MutableStateFlow(false)
     /** The session holds a signed-in account (its auth cookie), as last read ([refreshSignIn]). */
     val signedIn: StateFlow<Boolean> = _signedIn

@@ -46,7 +46,12 @@ object LyricsApi {
         val durationMs: Long,
         val coverUrl: String = "",
     ) {
-        val key: String get() = trackId.ifBlank { "${title.lowercase()}|${artist.substringBefore(",").trim().lowercase()}" }
+        val key: String get() = trackId.ifBlank {
+            listOf(title, artist, album).joinToString(prefix = "metadata:", postfix = ":$durationMs") {
+                val value = it.trim().lowercase()
+                "${value.length}:$value"
+            }
+        }
     }
 
     // Cache by track: re-opening the lyrics (card + full screen ask for the same

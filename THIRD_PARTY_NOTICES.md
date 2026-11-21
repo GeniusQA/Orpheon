@@ -16,7 +16,7 @@ recordings are not bundled.
 ## ONNX Runtime — MIT
 https://github.com/microsoft/onnxruntime
 
-Copyright Microsoft Corporation. `com.microsoft.onnxruntime:onnxruntime-android` 1.23.2 runs the
+Copyright Microsoft Corporation. `com.microsoft.onnxruntime:onnxruntime-android` 1.32.0 runs the
 Beat This model on the phone (the desktop bench uses the JVM build of the same version).
 
 ## Spotui — GPL-3.0

@@ -210,7 +210,7 @@ object AutoMix {
     /** The policy's decision for two analysed songs. The listener's settings may only tighten its limits. */
     fun decide(a: TrackAnalysis, b: TrackAnalysis, earliestExit: Double, sameAlbum: Boolean, listener: Float,
                genreA: app.myspoti.automix.segue.GenreFamily? = null, genreB: app.myspoti.automix.segue.GenreFamily? = null): app.myspoti.automix.segue.SegueDecision {
-        val s = settings()
+        val s = settings(playbackRate = listener.toDouble())
         val d = app.myspoti.automix.segue.SeguePolicy.decide(app.myspoti.automix.segue.SegueRequest(a, b, (earliestExit * 1e6).toLong(),
             listenerRate = (listener * app.myspoti.automix.segue.SegueFormat.RATE_NOMINAL).toLong(),
             // The Orpheon planner ramps both songs and keeps its own tempo limits (see OrpheonTuning): the

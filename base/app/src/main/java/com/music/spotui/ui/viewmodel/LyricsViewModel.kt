@@ -303,6 +303,10 @@ class LyricsViewModel constructor() : ViewModel() {
                 val latest = _state.value as? State.Loaded ?: return@withContext
                 if (latest.lyrics != cur.lyrics) return@withContext
                 if (result == null) {
+                    if (latest.translationRequested) com.music.spotui.ui.components.UserNotices.post(
+                        com.music.spotui.di.Graph.app.getString(app.myspoti.engine.R.string.lyrics_translation_unavailable),
+                        long = true,
+                    )
                     _state.value = latest.copy(
                         translating = false,
                         translationChecked = true,

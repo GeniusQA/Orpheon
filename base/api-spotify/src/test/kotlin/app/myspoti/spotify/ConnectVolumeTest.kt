@@ -13,23 +13,20 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 /**
- * #159: a Samsung soundbar went to 100 % when the music was sent to it. The page player's volume
- * is the Connect volume of the active device: the page's own repairs (a page back after a reload,
- * the silent-song guard) set it only when this page is that device, never on a speaker at 0.
+ * #159: a speaker at 0 must not be raised to full volume by repairs made for this page's player.
+ * The page's volume is Connect's volume only while this page is the active device.
  */
 class ConnectVolumeTest {
     private class FakeHost : BridgeHost {
         override val messages = MutableSharedFlow<String>(extraBufferCapacity = 64)
-        /** This page is Connect's active device (the page's device list). */
         @Volatile var active = false
-        /** The page player's volume: the active device's. */
         @Volatile var playerVolume = 0.0
         val sets = java.util.concurrent.CopyOnWriteArrayList<String>()
         @Volatile var time = 10.0
+
         override suspend fun evaluate(script: String) {
             val m = Regex("""Myspoti\.call\((\d+), "([^"]+)", (.*)\)\.catch""", RegexOption.DOT_MATCHES_ALL).find(script) ?: return
             val value = when (m.groupValues[2]) {
-                // Right after a transfer: the element has not stopped yet, the volume read is the speaker's.
                 "media.state" -> {
                     time += 2.0
                     """{"paused":false,"muted":false,"volume":1,"level":1,"own":1,"time":$time,"readyState":4,"ended":false,"playerVolume":$playerVolume,"active":$active}"""
@@ -40,6 +37,7 @@ class ConnectVolumeTest {
             }
             messages.emit("""{"type":"result","id":${m.groupValues[1]},"ok":true,"value":$value}""")
         }
+
         suspend fun post(json: String) = messages.emit(json)
     }
 
@@ -73,14 +71,22 @@ class ConnectVolumeTest {
         waitFor("state") { player.state.value?.item?.name == "A" }
     }
 
-    @Test fun `a speaker at 0 that plays is never set to full volume by the page`() = time.test {
+    @Test fun `a speaker at zero is never set to full volume by the page`() = time.test {
         playing()
-        // Past the page back and two volume checks of the watcher.
         delay(14_000)
         assertEquals(emptyList<String>(), host.sets.toList())
     }
 
-    @Test fun `this page silent while it is the active device gets its volume back`() = time.test {
+    @Test fun `a stale active flag with no known volume cannot raise a muted speaker`() = time.test {
+        host.active = true
+        playing()
+        delay(14_000)
+        assertEquals(emptyList<String>(), host.sets.toList())
+    }
+
+    @Test fun `this page silent while active gets its volume back`() = time.test {
+        player.setVolume(0.25)
+        host.sets.clear()
         host.active = true
         playing()
         waitFor("volume set", ms = 14_000) { host.sets.isNotEmpty() }

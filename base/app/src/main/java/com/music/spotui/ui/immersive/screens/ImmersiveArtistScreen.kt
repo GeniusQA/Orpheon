@@ -309,7 +309,7 @@ private fun ArtistOverviewContent(
                     }
                     overview.monthlyListeners?.let {
                         val compact = android.icu.text.CompactDecimalFormat
-                            .getInstance(java.util.Locale.getDefault(), android.icu.text.CompactDecimalFormat.CompactStyle.SHORT)
+                            .getInstance(java.util.Locale.US, android.icu.text.CompactDecimalFormat.CompactStyle.SHORT)
                             .format(it)
                         Text(
                             text = stringResource(R.string.monthly_listeners_text, compact),

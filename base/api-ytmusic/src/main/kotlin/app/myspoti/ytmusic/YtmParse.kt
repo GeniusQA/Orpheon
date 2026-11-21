@@ -189,6 +189,21 @@ object YtmParse {
         return found.keys.mapNotNull(::row)
     }
 
+    /** One recommendation row, with the items the web app put in it. */
+    data class RecommendationShelf(val title: String, val items: List<Item>)
+
+    /** Home's carousel shelves, in order, with repeated recommendations removed. */
+    fun home(answer: JsonElement): List<RecommendationShelf> {
+        val seen = mutableSetOf<String>()
+        return deep(answer, "musicCarouselShelfRenderer").mapNotNull { shelf ->
+            val title = text(shelf.o("header")?.o("musicCarouselShelfBasicHeaderRenderer")?.o("title")) ?: return@mapNotNull null
+            val items = shelf.a("contents").orEmpty().mapNotNull { entry ->
+                entry.o()?.let { it.o("musicResponsiveListItemRenderer")?.let(::row) ?: it.o("musicTwoRowItemRenderer")?.let(::twoRow) }
+            }.filter { seen.add(key(it)) }
+            if (items.isEmpty()) null else RecommendationShelf(title, items)
+        }
+    }
+
     /** Every card of an answer (grids and carousels), in order. */
     fun cards(answer: JsonElement): List<Item> = deep(answer, "musicTwoRowItemRenderer").mapNotNull(::twoRow)
 

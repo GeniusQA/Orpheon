@@ -81,11 +81,19 @@ class SpotifySearch(private val gql: Gql) : Search {
 
     /** The four music tabs in parallel: one round trip of wall time. */
     override suspend fun all(query: String, limit: Int): SearchResults = coroutineScope {
-        val t = async { tracks(query, 0, limit) }
-        val ar = async { artists(query, 0, limit) }
-        val al = async { albums(query, 0, limit) }
-        val p = async { playlists(query, 0, limit) }
-        SearchResults(t.await(), ar.await(), al.await(), p.await())
+        fun <T> tab(read: suspend () -> Page<T>) = async {
+            try { Result.success(read()) }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Exception) { Result.failure(e) }
+        }
+        val t = tab { tracks(query, 0, limit) }
+        val ar = tab { artists(query, 0, limit) }
+        val al = tab { albums(query, 0, limit) }
+        val p = tab { playlists(query, 0, limit) }
+        val tabs = listOf(t.await(), ar.await(), al.await(), p.await())
+        if (tabs.all { it.isFailure }) throw tabs.first().exceptionOrNull()!!
+        fun <T> Result<Page<T>>.page() = getOrElse { Page(emptyList(), 0, 0, null) }
+        SearchResults(t.await().page(), ar.await().page(), al.await().page(), p.await().page())
     }
 
     override suspend fun suggestions(query: String, limit: Int): List<String> {
