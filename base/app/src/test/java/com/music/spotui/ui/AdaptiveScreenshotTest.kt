@@ -631,10 +631,7 @@ abstract class AdaptiveScreenshotTest(private val size: String) {
         // heading, the context's heading, then the songs (Song 09 first).
         // The queue has a variable number of rows above the songs (source picker, moods, headings),
         // so anchor the test on the song itself instead of a fixed list index.
-        rule.onAllNodes(androidx.compose.ui.test.hasText("Song 11"), useUnmergedTree = true)
-            .fetchSemanticsNodes().firstOrNull()?.let {
-                rule.onNodeWithTag("queue").performScrollToNode(androidx.compose.ui.test.hasText("Song 11"))
-            } ?: rule.onNodeWithTag("queue").performScrollToIndex(12)
+        rule.onNode(androidx.compose.ui.test.hasText("Song 11"), useUnmergedTree = true).performScrollTo()
         rule.mainClock.advanceTimeBy(500)
         val d = rule.activity.resources.displayMetrics.density
         val title = rule.onAllNodes(androidx.compose.ui.test.hasText("Song 11"), useUnmergedTree = true)
