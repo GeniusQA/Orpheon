@@ -627,19 +627,23 @@ abstract class AdaptiveScreenshotTest(private val size: String) {
             }
         }
         rule.mainClock.advanceTimeBy(1_000)
-        // Some rows above the ones seen, for the list to run up to: header, now playing and its
-        // heading, the context's heading, then the songs (Song 09 first).
         // The queue has a variable number of rows above the songs (source picker, moods, headings),
-        // so anchor the test on the song itself instead of a fixed list index.
-        // Two new rows above the now-playing section (source picker and mood chips) shift the
-        // original index by two; Song 11 stays the third drag handle after this scroll.
-        rule.onNodeWithTag("queue").performScrollToIndex(14)
-        rule.mainClock.advanceTimeBy(500)
+        // so find the row by its title instead of relying on an index that moves with the UI.
+        var title: androidx.compose.ui.geometry.Rect? = null
+        for (index in 8..20) {
+            rule.onNodeWithTag("queue").performScrollToIndex(index)
+            rule.mainClock.advanceTimeBy(150)
+            title = rule.onAllNodes(androidx.compose.ui.test.hasText("Song 11"), useUnmergedTree = true)
+                .fetchSemanticsNodes().firstOrNull()?.boundsInRoot
+            if (title != null && title.top > 110 * rule.activity.resources.displayMetrics.density) break
+        }
         val d = rule.activity.resources.displayMetrics.density
-        val title = rule.onAllNodes(androidx.compose.ui.test.hasText("Song 11"), useUnmergedTree = true)
-            .fetchSemanticsNodes().first().boundsInRoot
-        val from = androidx.compose.ui.geometry.Offset(title.center.x, title.center.y)
-        org.junit.Assert.assertTrue("Song 11 is the third row seen", kotlin.math.abs(title.center.y - from.y) < 24 * d)
+        org.junit.Assert.assertNotNull("Song 11 is visible after scrolling", title)
+        val row = title!!
+        val handles = rule.onAllNodes(androidx.compose.ui.test.hasContentDescription("Move in queue"), useUnmergedTree = true)
+            .fetchSemanticsNodes().map { it.boundsInRoot }.filter { it.top > 110 * d }
+        val from = handles.minByOrNull { kotlin.math.abs(it.center.y - row.center.y) }!!.center
+        org.junit.Assert.assertTrue("Song 11 has a drag handle", kotlin.math.abs(row.center.y - from.y) < 24 * d)
         rule.onRoot().performTouchInput { down(from) }
         rule.mainClock.advanceTimeByFrame()
         // Up past the top of the list (110 dp from the window's top), into the header, by small moves.
