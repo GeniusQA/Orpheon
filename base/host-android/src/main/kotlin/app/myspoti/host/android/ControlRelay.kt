@@ -364,15 +364,16 @@ internal class ControlRelay(private val view: WebView, private val fingerprint: 
             }
         if (debuggable && registration) Logbook.log("registration answered: ${text.take(500)}")
         if (debuggable && AD_MARK.containsMatchIn(text)) keepAdSample(method, url, body, text)
-        if (it.code in 200..299 && url.contains("/track-playback/")) {
-            // The songs' media manifests, for extensions to read (spotify.media).
+        val replyText = if (it.code in 200..299 && url.contains("/track-playback/")) {
             app.myspoti.spotify.bridge.MediaManifests.record(text)
-            // Where the next ad comes (read only: the reply goes to the page as it came).
+            val rewritten = app.myspoti.spotify.bridge.AdBlock.withoutAds(text)
+            if (rewritten !== text) Logbook.log("adblock: rewrote track-playback state machine to skip ad transition")
             val before = app.myspoti.spotify.bridge.AdSchedule.due.value
-            app.myspoti.spotify.bridge.AdSchedule.record(text)
+            app.myspoti.spotify.bridge.AdSchedule.record(rewritten)
             app.myspoti.spotify.bridge.AdSchedule.due.value?.takeIf { d -> d != before }?.let { d -> Logbook.log("ad due after this song (${d.songUri}), then ${d.nextUri ?: "a song not named"}") }
-        }
-        reply(id, doc, it.code, out.toString(), text)
+            rewritten
+        } else text
+        reply(id, doc, it.code, out.toString(), replyText)
     }
 
     private fun reply(id: Int, doc: String, status: Int, headersJson: String, body: String) {

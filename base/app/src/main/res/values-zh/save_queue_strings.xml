@@ -1,0 +1,5 @@
+<resources>
+    <string name="save_queue_as_playlist">将队列保存为歌单</string>
+    <string name="save_queue_saved">已将队列保存到 %1$s</string>
+    <string name="save_queue_failed">无法将队列保存到 %1$s</string>
+</resources>

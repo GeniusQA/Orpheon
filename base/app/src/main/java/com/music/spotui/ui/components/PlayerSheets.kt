@@ -116,6 +116,7 @@ fun activeDeviceLabel(): String {
         AudioRoute.Kind.SPEAKER -> stringResource(R.string.connect_phone_is_self)
         AudioRoute.Kind.BLUETOOTH -> route.name.ifBlank { stringResource(R.string.label_bluetooth) }
         AudioRoute.Kind.WIRED -> stringResource(R.string.headphones)
+        AudioRoute.Kind.USB_DAC -> route.name.ifBlank { stringResource(R.string.nerd_output_usb) }
     }
 }
 
@@ -128,6 +129,7 @@ fun activeDeviceIcon(): ImageVector {
         AudioRoute.Kind.SPEAKER -> Icons.Default.Smartphone
         AudioRoute.Kind.BLUETOOTH -> Icons.Default.Bluetooth
         AudioRoute.Kind.WIRED -> Icons.Default.Headphones
+        AudioRoute.Kind.USB_DAC -> Icons.Default.Headphones
     }
 }
 

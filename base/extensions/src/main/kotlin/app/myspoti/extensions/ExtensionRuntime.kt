@@ -700,8 +700,11 @@ class ExtensionRuntime(
          * or the network changed the value of a per-network setting (`{ key, network: true }`).
          */
         const val EVENT_SETTING = "setting"
+        /** The queue changed (up to five upcoming tracks). */
+        const val EVENT_QUEUE = "queue"
         /** Each event, and the action an extension needs to receive it. */
         val EVENTS: Map<String, Action> = mapOf(
+            EVENT_QUEUE to Action.PLAYBACK_EVENTS,
             EVENT_TRACK to Action.PLAYBACK_EVENTS,
             EVENT_PLAYBACK to Action.PLAYBACK_EVENTS,
             EVENT_AUTH to Action.WEBVIEW_AUTH,

@@ -189,6 +189,7 @@ fun MiniPlayer() {
         AudioRoute.Kind.SPEAKER -> null
         AudioRoute.Kind.BLUETOOTH -> route.name.ifBlank { stringResource(R.string.label_bluetooth) }
         AudioRoute.Kind.WIRED -> stringResource(R.string.headphones)
+        AudioRoute.Kind.USB_DAC -> route.name.ifBlank { stringResource(R.string.nerd_output_usb) }
     }
 
     // Card tint from the cover — extracted once per cover, not on every recomposition.

@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Icon
@@ -35,6 +36,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -69,6 +71,29 @@ fun QueueScreen(navController: NavController) {
     fun matches(row: SongPlayer.QueueItem) = row.song.title.contains(term, ignoreCase = true) || row.song.singer.contains(term, ignoreCase = true)
     val queued = remember(q.queued, term) { q.queued.filter(::matches) }
     val upcoming = remember(q.nextUp, term) { q.nextUp.filter(::matches) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val saveableTrackIds = remember(q.current, q.queued, q.nextUp) {
+        (listOfNotNull(q.current?.song?.spotifyTrackId) + q.queued.map { it.song.spotifyTrackId } + q.nextUp.map { it.song.spotifyTrackId })
+            .map { it.trim() }.filter { it.isNotBlank() }.distinct()
+    }
+    var saveDialogOpen by remember { mutableStateOf(false) }
+    var activeMood by remember { mutableStateOf<com.music.spotui.ui.components.QueueMood?>(null) }
+    var moodBusy by remember { mutableStateOf(false) }
+    var recProvider by remember { mutableStateOf(com.music.spotui.ui.components.RecProviderPrefs.queue(context)) }
+    val discoveryScope = androidx.compose.runtime.rememberCoroutineScope()
+    if (saveDialogOpen) com.music.spotui.ui.components.SaveQueueDialog(
+        initialName = SongPlayer.nowPlaying.value.contextName.ifBlank { stringResource(R.string.action_queue_label) },
+        currentId = q.current?.song?.spotifyTrackId,
+        queuedIds = q.queued.map { it.song.spotifyTrackId },
+        nextUpIds = q.nextUp.map { it.song.spotifyTrackId },
+        onDismiss = { saveDialogOpen = false },
+    ) { name, ids ->
+        saveDialogOpen = false
+        com.music.spotui.data.api.SpotifySync.createPlaylistWithTracks(context, name, ids) { ok ->
+            val msg = context.getString(if (ok) R.string.save_queue_saved else R.string.save_queue_failed, name)
+            android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -94,7 +119,17 @@ fun QueueScreen(navController: NavController) {
                     ) { navController.navigateUp() }
             )
             Spacer(modifier = Modifier.width(12.dp))
-            Text(stringResource(R.string.action_queue_label), color = AppText, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.action_queue_label), color = AppText, fontSize = 18.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f))
+            if (saveableTrackIds.isNotEmpty()) Icon(
+                imageVector = Icons.AutoMirrored.Rounded.PlaylistAdd,
+                contentDescription = stringResource(R.string.save_queue_as_playlist),
+                tint = AppText,
+                modifier = Modifier.size(26.dp).clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                ) { saveDialogOpen = true },
+            )
         }
 
         androidx.compose.material3.OutlinedTextField(
@@ -103,6 +138,52 @@ fun QueueScreen(navController: NavController) {
             singleLine = true,
             label = { Text(stringResource(R.string.add_songs_search_hint)) },
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        )
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            com.music.spotui.ui.components.RecProviderChipRow(
+                selected = recProvider,
+                immersive = false,
+                onSelect = {
+                    recProvider = it
+                    com.music.spotui.ui.components.RecProviderPrefs.setQueue(context, it)
+                },
+                modifier = Modifier.weight(1f),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                stringResource(R.string.queue_surprise_me),
+                color = AppText,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.clickable {
+                    if (!moodBusy) {
+                        moodBusy = true
+                        discoveryScope.launch {
+                            try {
+                                com.music.spotui.ui.components.QueueDiscovery.surpriseMe(context, recProvider)
+                            } finally { moodBusy = false }
+                        }
+                    }
+                },
+            )
+        }
+        com.music.spotui.ui.components.QueueMoodChipStrip(
+            activeMood = activeMood,
+            busy = moodBusy,
+            immersive = false,
+            onSelect = { mood ->
+                activeMood = mood
+                moodBusy = true
+                discoveryScope.launch {
+                    try {
+                        val added = com.music.spotui.ui.components.QueueDiscovery.reshapeQueue(context, mood, recProvider)
+                        val msg = if (added > 0) context.getString(R.string.queue_mood_added, added, context.getString(mood.labelRes))
+                        else context.getString(R.string.queue_mood_empty)
+                        android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
+                    } finally { moodBusy = false }
+                }
+            },
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
         )
         LazyColumn(
             contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 32.dp),

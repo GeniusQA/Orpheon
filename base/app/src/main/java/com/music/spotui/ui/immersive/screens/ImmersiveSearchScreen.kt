@@ -76,7 +76,7 @@ import com.music.spotui.data.preferences.removeRecentItem
 import com.music.spotui.di.Graph
 import com.music.spotui.di.SongPlayer
 import com.music.spotui.ui.immersive.sheets.ImmersiveSongOptionsSheet
-import com.music.spotui.ui.components.launchVoiceSearch
+import com.music.spotui.ui.components.rememberVoiceSearch
 import com.music.spotui.ui.immersive.Immersive
 import com.music.spotui.ui.immersive.components.ImmersiveButton
 import com.music.spotui.ui.immersive.components.ImmersiveCover
@@ -122,6 +122,7 @@ fun ImmersiveSearchScreen(navController: NavController) {
     val loading = results is Response.Loading
     val failed = results is Response.Error
     val context = LocalContext.current
+    val voiceSearch = rememberVoiceSearch(vm::search)
     val text = vm.query
     val filter = vm.filter
 
@@ -208,7 +209,7 @@ fun ImmersiveSearchScreen(navController: NavController) {
                         )
                         Spacer(Modifier.width(8.dp))
                         // Voice search: the Google app's own "Search with your voice" for music.
-                        ImmersiveVoiceSearchButton(onClick = { launchVoiceSearch(context) })
+                        ImmersiveVoiceSearchButton(onClick = { voiceSearch() })
                     }
                     if (text.isNotBlank()) {
                         ImmersiveChipRow {

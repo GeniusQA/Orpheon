@@ -949,9 +949,8 @@ object Extensions {
         }
         // The same song as a download asks with: its ISRC, which an extension matches recordings by.
         val withIsrc = withIsrc(track)
-        // Without it the sources would say "not found" (they match by it): not a miss of the song,
-        // nothing recorded, the caller falls back for now and the song is asked again later.
-        if (withIsrc.isrc.isNullOrBlank() && !app.myspoti.host.android.MyspotiRuntime.api.ready.value) {
+        val noIsrcCold = withIsrc.isrc.isNullOrBlank() && !app.myspoti.host.android.MyspotiRuntime.api.ready.value
+        if (noIsrcCold && withIsrc.title.isBlank()) {
             attempts.update(attempt) { it.copy(fallback = "Spotify: no ISRC yet (Spotify not ready)") }
             return null
         }
@@ -983,7 +982,7 @@ object Extensions {
         // A source cut short because one above it answered was not needed.
         val all = skipped + asked.map { (id, _) -> answers[id] ?: PlayAttempt.Ask(id, Outcome.Skipped().key, ms, "not needed: another source answered first") }
         if (found == null) {
-            Logbook.log("audio: no extension had $label ($ms ms)"); misses.record(track.id, ahead)
+            Logbook.log("audio: no extension had $label ($ms ms)"); if (!noIsrcCold) misses.record(track.id, ahead)
             attempts.update(attempt) { it.copy(asked = all, fallback = "Spotify: no extension had it") }
             return null
         }
@@ -1049,8 +1048,9 @@ object Extensions {
         // ISRC lookup failed, and an extension that matches by ISRC (the Tidal pool) said "not found"
         // at once: the resume went to Spotify (reported, again and again). A song never seen waits
         // for Spotify to be ready instead.
+        val waitMs = if (app.myspoti.host.android.MyspotiRuntime.api.ready.value) ISRC_WAIT_MS else ISRC_COLD_WAIT_MS
         val known = isrcs[track.id] ?: savedIsrc(track.id)?.also { isrcs[track.id] = it } ?: runCatching {
-            kotlinx.coroutines.withTimeout(ISRC_WAIT_MS) {
+            kotlinx.coroutines.withTimeout(waitMs) {
                 val api = app.myspoti.host.android.MyspotiRuntime.api
                 api.ready.first { it }
                 api.catalog.isrc("spotify:track:${track.id}")
@@ -1071,6 +1071,7 @@ object Extensions {
         }
     }
     private const val ISRC_WAIT_MS = 10_000L
+    private const val ISRC_COLD_WAIT_MS = 2_500L
 
     /** For the player's loading thread (never the main one). */
     fun audioBlocking(track: TrackInfo, ahead: Boolean = false): AudioStream? = runBlocking(Dispatchers.IO) { audio(track, ahead = ahead) }
@@ -1312,6 +1313,39 @@ object Extensions {
         }
     }
 
+    /** Up to five upcoming tracks, sent to extensions that listen to `queue`, only on change. */
+    private fun watchQueue() {
+        CoroutineScope(SupervisorJob() + Dispatchers.Main).launch {
+            val delivered = java.util.IdentityHashMap<ExtensionRuntime, String>()
+            while (true) {
+                delay(1_000)
+                val listeners = runtimes.values.filter { it.listens(ExtensionRuntime.EVENT_QUEUE) }
+                delivered.keys.retainAll(listeners.toSet())
+                if (listeners.isEmpty() || SongPlayer.routing) continue
+                val q = SongPlayer.engineQueue.value
+                val next = app.myspoti.extensions.QueueLookahead.next(q.queued + q.nextUp).map { item ->
+                    val s = item.song
+                    val info = trackInfo(s.spotifyTrackId, s.title, s.singer, s.album, s.durationMs.toLong(), s.coverUri)
+                    Json.parseToJsonElement(info.copy(uri = item.uri).toJson())
+                }
+                val json = JsonObject(mapOf("next" to JsonArray(next))).toString()
+                for (rt in listeners) {
+                    if (delivered[rt] == json) continue
+                    delivered[rt] = json
+                    try {
+                        withContext(Dispatchers.IO) {
+                            runInterruptible { rt.emit(ExtensionRuntime.EVENT_QUEUE, json, TRACK_MS) }
+                        }
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        failed(rt.manifest.id, e.javaClass.simpleName)
+                    }
+                }
+            }
+        }
+    }
+
     private val playback = PlaybackTracker()
     private val playbackOut = kotlinx.coroutines.channels.Channel<String>(256, kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST)
 
@@ -1326,6 +1360,7 @@ object Extensions {
      * live), only while an extension listens; delivered in order, one at a time.
      */
     private fun watchPlayback() {
+        watchQueue()
         scope.launch {
             for (json in playbackOut) {
                 runtimes.forEach { (id, rt) ->

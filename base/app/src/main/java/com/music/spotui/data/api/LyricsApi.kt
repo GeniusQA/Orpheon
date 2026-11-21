@@ -567,13 +567,13 @@ object LyricsApi {
      * the same lines, when [to] has none: Spotify never times them apart, LyricsPlus and lrc.red
      * (Apple Music's) do, and they are asked anyway.
      */
-    private suspend fun withBacks(to: Lyrics, vararg asked: kotlinx.coroutines.Deferred<Lyrics?>): Lyrics {
-        if (LyricsExtras.hasBacks(to)) return to
-        for (a in asked) {
-            val from = a.await()?.takeIf { LyricsExtras.hasBacks(it) } ?: continue
-            return LyricsExtras.carry(to, from)
+    internal suspend fun withBacks(to: Lyrics, vararg asked: kotlinx.coroutines.Deferred<Lyrics?>): Lyrics {
+        var enriched = to
+        for (source in asked) {
+            val from = source.await() ?: continue
+            enriched = LyricsExtras.carry(enriched, from)
         }
-        return to
+        return enriched
     }
 
     /**

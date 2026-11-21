@@ -62,27 +62,40 @@ object LyricsExtras {
      */
     fun carry(to: Lyrics, from: Lyrics?): Lyrics {
         if (from == null) return to
-        val wantsExtras = to.lines.none { it.hasExtra() } && from.lines.any { it.hasExtra() }
+        val wantsTranslation = to.lines.none { it.translation != null } && from.lines.any { it.translation != null }
+        val wantsRomanization = to.lines.none { it.romanization != null } && from.lines.any { it.romanization != null }
+        val wantsExtras = wantsTranslation || wantsRomanization
         val wantsBacks = !hasBacks(to) && hasBacks(from)
         val wantsVoices = to.lines.all { it.voice == null } && from.hasDuet
         if (!wantsExtras && !wantsBacks && !wantsVoices) return to
         val pairs = pair(to, from)
         var out = to
-        if (wantsExtras) out = carryExtras(out, from, pairs)
+        if (wantsExtras) out = carryExtras(out, from, pairs, wantsTranslation, wantsRomanization)
         if (pairs.count { it != null } * 3 < to.lines.size) return out
         if (wantsBacks) out = carryBacks(out, pairs)
         if (wantsVoices) out = out.copy(lines = out.lines.mapIndexed { i, l -> pairs[i]?.voice?.let { l.copy(voice = it) } ?: l })
         return out
     }
 
-    private fun carryExtras(to: Lyrics, from: Lyrics, pairs: List<LyricLine?>): Lyrics {
+    private fun carryExtras(
+        to: Lyrics, from: Lyrics, pairs: List<LyricLine?>, translate: Boolean, romanize: Boolean,
+    ): Lyrics {
         var hit = 0
         val lines = to.lines.mapIndexed { i, l ->
-            val m = pairs[i]?.takeIf { it.hasExtra() }
-            if (m == null) l else { hit++; l.copy(translation = m.translation, romanization = m.romanization) }
+            val m = pairs[i]?.takeIf { (translate && it.translation != null) || (romanize && it.romanization != null) }
+            if (m == null) l else {
+                hit++
+                l.copy(
+                    translation = if (translate) m.translation else l.translation,
+                    romanization = if (romanize) m.romanization else l.romanization,
+                )
+            }
         }
         if (hit * 3 < to.lines.size) return to
-        return to.copy(lines = lines, translationLanguage = from.translationLanguage.takeIf { lines.any { it.translation != null } })
+        return to.copy(
+            lines = lines,
+            translationLanguage = if (translate && lines.any { it.translation != null }) from.translationLanguage else to.translationLanguage,
+        )
     }
 
     private fun carryBacks(to: Lyrics, pairs: List<LyricLine?>): Lyrics {

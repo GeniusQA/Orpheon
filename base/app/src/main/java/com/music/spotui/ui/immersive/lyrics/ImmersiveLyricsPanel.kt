@@ -229,6 +229,10 @@ fun ImmersiveLyricsPanel(
             // the lines they were made for.
             key(trackKey) {
                 Box(modifier) {
+                    val target = com.music.spotui.ui.components.readerLanguage()
+                    val canRomanize = current.lyrics.hasRomanization
+                    val canTranslate = !LyricsViewModel.sameLanguage(current.sourceLanguage, target)
+                    val controlsVisible = !selecting && (canRomanize || canTranslate || current.showTranslation)
                     // Other lyrics for the same song (the line-timed ones shown first, then the
                     // word-timed ones): each has its own list, opened on the line being sung, and the
                     // new one fades in over the old. Reported: the lines jumped when the words came,
@@ -240,19 +244,15 @@ fun ImmersiveLyricsPanel(
                         val live = shown === current.lyrics
                         // The translation the song options sheet turned on, line for line with the source's.
                         LyricsList(
-                            shown, trackKey, Modifier.fillMaxSize(), contentPadding, vm,
+                            shown, trackKey,
+                            Modifier.fillMaxSize().padding(end = if (controlsVisible) 48.dp else 0.dp),
+                            contentPadding, vm,
                             translations = current.translations.takeIf { live && current.showTranslation },
                             romanizing = LyricsRomanizationPref.on && shown.hasRomanization,
                         )
                     }
-                    // The romanization, when the lyrics have one, then the Classic screen's translation,
-                    // with its language setting and its service: the lyrics are only sent when it is
-                    // tapped. Not offered for a song already in that language.
-                    val target = com.music.spotui.ui.components.readerLanguage()
-                    val canRomanize = current.lyrics.hasRomanization
-                    val canTranslate = !LyricsViewModel.sameLanguage(current.sourceLanguage, target)
                     val layoutDirection = LocalLayoutDirection.current
-                    if (!selecting) {
+                    if (controlsVisible) {
                         Column(
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                             horizontalAlignment = Alignment.End,
@@ -269,9 +269,9 @@ fun ImmersiveLyricsPanel(
                                 on = LyricsRomanizationPref.on,
                                 onClick = { LyricsRomanizationPref.set(context, !LyricsRomanizationPref.on) },
                             )
-                            if (canTranslate) LyricsToggle(
+                            if (canTranslate || current.showTranslation) LyricsToggle(
                                 icon = Icons.Rounded.Translate,
-                                description = stringResource(R.string.lyrics_fullscreen_chip_label_translate),
+                                description = stringResource(if (current.showTranslation) R.string.lyrics_hide_translation else R.string.lyrics_fullscreen_chip_label_translate),
                                 on = current.showTranslation,
                                 loading = current.translating && current.translationRequested,
                                 onClick = { vm.toggleTranslation(target) },

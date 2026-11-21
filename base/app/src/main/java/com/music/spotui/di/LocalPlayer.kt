@@ -930,7 +930,15 @@ object LocalPlayer {
             run.go = true
             com.music.spotui.automix.AutoMix.journal("segue armed: the chain is $lead ms before the cue and ${stageA.positionUs / 1000 - pos} ms ahead of the player, the cue ${exitMs - pos} ms away")
         } else if (lead < MixPreparation.SEGUE_ARM_MIN_MS) {
-            cancelMix("segue not ready $lead ms before the cue (chain ${stageA?.marked}/${stageB?.marked}, buffered ${d.totalBufferedDuration} ms); replanning")
+            val fade = run.plan.volumeFallback()
+            if (fade != null && pos <= exitMs && d.playbackState == Player.STATE_READY) {
+                d.volume = 0f
+                stageB?.disarm()
+                run.plan = fade
+                com.music.spotui.automix.AutoMix.journal("segue chain not ready: keeping the prepared deck for a volume fade at the original cue")
+            } else {
+                cancelMix("segue not ready $lead ms before the cue (chain ${stageA?.marked}/${stageB?.marked}, buffered ${d.totalBufferedDuration} ms); replanning")
+            }
         }
     }
 
@@ -1653,7 +1661,11 @@ object LocalPlayer {
     /** The sleep timer's fade: the player's volume (a crossfade owns it while it runs, the fade then goes on after it). */
     fun setGain(gain: Float) { if (outgoing == null && mix == null) exo?.volume = gain }
     fun pause() { if (CastPlayback.active) CastPlayback.pause() else exo?.pause() }
+    private var lastNextAtMs = 0L
     fun next() {
+        val now = android.os.SystemClock.elapsedRealtime()
+        val rapid = now - lastNextAtMs < 1_500L
+        lastNextAtMs = now
         // In the first half of a crossfade the main player is on the next song already, while the
         // screens (and the ear) are still on the one going out: a skip there went two songs on.
         // It lands on the song coming in, at full volume.
@@ -1662,7 +1674,7 @@ object LocalPlayer {
             log("skip during the crossfade: the song coming in plays")
             return endFade()
         }
-        if (mixOnSkip()) {
+        if (!rapid && mixOnSkip()) {
             cancelOnce("next")
             com.music.spotui.extensions.Extensions.skipAsked("forward")
             return

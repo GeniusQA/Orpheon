@@ -47,6 +47,10 @@ class MixPlan(
         FADE,
     }
 
+    /** A FADE that lost its lane chain: keep both prepared decks and do the hand-over by volume only. */
+    fun volumeFallback(): MixPlan? = if (segue == null || synced || ramped || speedB != 1.0) null else
+        MixPlan(style, exitA, entryB, length, speedB, beats, swapAt, beatShare, matchB, restoreSec, note, matchA, filtered)
+
     val synced get() = style != Style.FADE
     val endA get() = exitA + length
     /** B's time when A is gone. */

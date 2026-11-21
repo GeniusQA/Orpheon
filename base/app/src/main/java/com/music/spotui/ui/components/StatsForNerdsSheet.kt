@@ -127,7 +127,7 @@ internal object NerdStats {
         row(R.string.nerd_file_size, download?.bytes?.takeIf { it > 0 }?.let { android.text.format.Formatter.formatShortFileSize(c, it) })
         row(R.string.nerd_buffer, LocalPlayer.bufferedAheadMs()?.let { c.getString(R.string.nerd_buffer_value, it / 1000.0) })
         row(R.string.nerd_state, LocalPlayer.playbackState())
-        rows += outputRows(c)
+        rows += outputRows(c, f)
         // AutoMix: the mix ahead or playing, else why the next song will not be mixed. It replaces the crossfade.
         if (AutoMix.on) row(R.string.nerd_automix, autoMixState(c))
         row(R.string.nerd_processing, listOfNotNull(
@@ -176,7 +176,7 @@ internal object NerdStats {
      * when Android gives it), the highest rate a USB device says it takes, and the rate Android's
      * mixer runs at. Android does not tell an app the Bluetooth codec: it is not shown.
      */
-    private fun outputRows(c: Context): List<Pair<String, String>> {
+    private fun outputRows(c: Context, f: androidx.media3.common.Format? = null): List<Pair<String, String>> {
         val rows = ArrayList<Pair<String, String>>()
         val cast = CastPlayback.device.value?.takeIf { CastPlayback.active }
         if (cast != null) return listOf(c.getString(R.string.nerd_output) to c.getString(R.string.nerd_output_cast, cast.name))
@@ -184,18 +184,62 @@ internal object NerdStats {
         val outs = runCatching { am.getDevices(AudioManager.GET_DEVICES_OUTPUTS).toList() }.getOrDefault(emptyList())
         val usb = outs.firstOrNull { it.type == AudioDeviceInfo.TYPE_USB_DEVICE || it.type == AudioDeviceInfo.TYPE_USB_HEADSET || it.type == AudioDeviceInfo.TYPE_USB_ACCESSORY }
         val route = AudioRoute.current(c)
-        val kindLabel = when {
-            route.kind == AudioRoute.Kind.BLUETOOTH -> R.string.nerd_output_bluetooth
-            usb != null -> R.string.nerd_output_usb
-            route.kind == AudioRoute.Kind.WIRED -> R.string.nerd_output_wired
-            else -> R.string.nerd_output_speaker
+        val kindLabel = when (route.kind) {
+            AudioRoute.Kind.USB_DAC -> R.string.nerd_output_usb
+            AudioRoute.Kind.BLUETOOTH -> R.string.nerd_output_bluetooth
+            AudioRoute.Kind.WIRED -> R.string.nerd_output_wired
+            AudioRoute.Kind.SPEAKER -> R.string.nerd_output_speaker
         }
-        val device = usb.takeIf { kindLabel == R.string.nerd_output_usb }
+        val device = usb.takeIf { route.kind == AudioRoute.Kind.USB_DAC }
         val name = if (device != null) runCatching { device.productName?.toString().orEmpty() }.getOrDefault("") else route.name
         val kind = c.getString(kindLabel)
         rows += c.getString(R.string.nerd_output) to (if (name.isBlank()) kind else c.getString(R.string.nerd_output_named, kind, name))
         device?.sampleRates?.maxOrNull()?.takeIf { it > 0 }?.let { rows += c.getString(R.string.nerd_output_max_rate) to khz(it) }
-        am.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE)?.toIntOrNull()?.let { rows += c.getString(R.string.nerd_mixer_rate) to khz(it) }
+        val mixerRate = am.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE)?.toIntOrNull()
+        mixerRate?.let { rows += c.getString(R.string.nerd_mixer_rate) to khz(it) }
+        val srcRate = f?.sampleRate?.takeIf { it > 0 }
+        val directSupported = if (android.os.Build.VERSION.SDK_INT >= 33 && srcRate != null) {
+            runCatching {
+                val format = android.media.AudioFormat.Builder()
+                    .setSampleRate(srcRate)
+                    .setEncoding(android.media.AudioFormat.ENCODING_PCM_16BIT)
+                    .setChannelMask(android.media.AudioFormat.CHANNEL_OUT_STEREO)
+                    .build()
+                val attrs = android.media.AudioAttributes.Builder()
+                    .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .build()
+                AudioManager.getDirectPlaybackSupport(format, attrs) != AudioManager.DIRECT_PLAYBACK_NOT_SUPPORTED
+            }.getOrDefault(false)
+        } else false
+        rows += c.getString(R.string.nerd_audio_api) to c.getString(
+            if (directSupported) R.string.nerd_audio_api_direct else R.string.nerd_audio_api_mixer
+        )
+        if (srcRate != null && mixerRate != null) {
+            val resampled = !directSupported && srcRate != mixerRate
+            rows += c.getString(R.string.nerd_resampling) to if (resampled) {
+                c.getString(R.string.nerd_resampling_yes, khz(srcRate), khz(mixerRate))
+            } else {
+                c.getString(R.string.nerd_resampling_no)
+            }
+        }
+        val dspActive = com.music.spotui.data.preferences.EqualizerPref.enabled ||
+            com.music.spotui.data.preferences.EqualizerPref.speed != 1f ||
+            com.music.spotui.data.preferences.EqualizerPref.skipSilence ||
+            (CrossfadePref.seconds > 0 && !AutoMix.on) ||
+            AutoMix.on
+        rows += c.getString(R.string.nerd_bit_perfect) to c.getString(
+            when {
+                dspActive -> R.string.nerd_bit_perfect_dsp
+                directSupported && route.kind == AudioRoute.Kind.USB_DAC -> R.string.nerd_bit_perfect_direct
+                else -> R.string.nerd_bit_perfect_mixer
+            }
+        )
+        val cellular = com.music.spotui.data.DataSaver.metered
+        val customProfile = com.music.spotui.data.preferences.getOutputStreamingQuality(c, route.kind, cellular)
+        val eff = customProfile ?: com.music.spotui.data.preferences.getStreamingQuality(c, cellular)
+        val netLabel = c.getString(if (cellular) R.string.nerd_profile_cellular else R.string.nerd_profile_wifi)
+        rows += c.getString(R.string.nerd_audio_profile) to "$kind · $netLabel → ${c.getString(streamingLabel(eff))}"
         return rows
     }
 

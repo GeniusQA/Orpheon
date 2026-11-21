@@ -1,0 +1,20 @@
+<resources>
+    <string name="rec_provider_spotify">Spotify</string>
+    <string name="rec_provider_ytmusic">YT Music</string>
+    <string name="rec_provider_both">Both</string>
+    <string name="queue_mood_similar">Similar</string>
+    <string name="queue_mood_familiar">Familiar</string>
+    <string name="queue_mood_chill">Chill</string>
+    <string name="queue_mood_workout">Workout</string>
+    <string name="queue_mood_focus">Focus</string>
+    <string name="queue_mood_party">Party</string>
+    <string name="queue_mood_late_night">Late night</string>
+    <string name="queue_mood_discover">Discover</string>
+    <string name="queue_mood_added">Added %1$d %2$s tracks to queue</string>
+    <string name="queue_mood_empty">No new tracks found for this mood</string>
+    <string name="queue_surprise_me">Surprise me</string>
+    <string name="queue_surprise_started">Surprise mix: %1$s</string>
+    <string name="save_queue_include_current">Include currently playing track</string>
+    <string name="save_queue_include_upcoming">Include upcoming context</string>
+    <string name="save_queue_track_count">%1$d tracks will be saved</string>
+</resources>

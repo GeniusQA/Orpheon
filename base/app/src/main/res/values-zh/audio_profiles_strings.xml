@@ -1,0 +1,18 @@
+<resources>
+    <string name="output_profiles_title">按音频输出设置音质</string>
+    <string name="output_profiles_detail">连接 USB DAC、有线耳机、蓝牙或扬声器时，自动切换当前网络下的串流音质</string>
+    <string name="output_profile_default">默认</string>
+    <string name="nerd_audio_api">音频 API</string>
+    <string name="nerd_audio_api_direct">AudioTrack · 直通 / 高解析</string>
+    <string name="nerd_audio_api_mixer">AudioTrack · Android 混音器</string>
+    <string name="nerd_resampling">重采样</string>
+    <string name="nerd_resampling_no">无（原始采样率）</string>
+    <string name="nerd_resampling_yes">重采样（%1$s → %2$s）</string>
+    <string name="nerd_bit_perfect">Bit-perfect</string>
+    <string name="nerd_bit_perfect_direct">已启用（USB 直通）</string>
+    <string name="nerd_bit_perfect_dsp">已绕过（EQ / DSP 生效）</string>
+    <string name="nerd_bit_perfect_mixer">否（Android 混音器）</string>
+    <string name="nerd_audio_profile">输出配置</string>
+    <string name="nerd_profile_wifi">Wi-Fi</string>
+    <string name="nerd_profile_cellular">移动网络</string>
+</resources>

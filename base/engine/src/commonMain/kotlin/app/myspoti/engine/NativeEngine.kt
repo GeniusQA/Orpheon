@@ -389,16 +389,75 @@ class NativeEngine(
     // ---------------------------------------------------------------- loading and finalizing
 
     /** [track] comes from the same state machine as [state]: a PUT answer in between may renumber tracks. */
+    private var blockedAdUri: String? = null
+    private var adStallReported = false
+
     private suspend fun load(state: SmState, track: SmTrack, position: Long, paused: Boolean, reasonStart: String, previousPosition: Long?) {
         if (track.contentType == "AD") {
+            if (blockedAdUri != null && current != null) return
             // No ad request is made and nothing is reported as played (decision of 2026-10-16).
             current = null
             player.stop()
             emit(EngineEvent.AdBreak(track.metadata.uri, track.metadata.duration))
+            if (blockedAdUri != null) {
+                val sm = machine
+                val visited = HashSet<String>()
+                var next = state
+                var target: SmTrack? = null
+                while (sm != null && visited.add(next.id)) {
+                    val ref = next.transitions.skipNext ?: next.transitions.advance ?: break
+                    next = sm.states.getOrNull(ref.stateIndex ?: break) ?: break
+                    val candidate = sm.tracks.getOrNull(next.track) ?: break
+                    if (candidate.contentType != "AD" && candidate.metadata.uri.startsWith("spotify:track:")) {
+                        target = candidate
+                        break
+                    }
+                }
+                if (target == null && sm != null) {
+                    val curIdx = sm.states.indexOfFirst { it.id == state.id }.coerceAtLeast(0)
+                    for (st in (sm.states.drop(curIdx + 1) + sm.states.take(curIdx))) {
+                        val candidate = sm.tracks.getOrNull(st.track) ?: continue
+                        if (candidate.contentType != "AD" && candidate.metadata.uri.startsWith("spotify:track:")) {
+                            next = st
+                            target = candidate
+                            break
+                        }
+                    }
+                }
+                val uri = target?.metadata?.uri
+                if (uri != null && sm != null) {
+                    stateIndex = sm.states.indexOfFirst { it.id == next.id }
+                    load(next, target, 0, paused, "remote", previousPosition)
+                    blockedAdUri = track.metadata.uri
+                } else if (!adStallReported) {
+                    adStallReported = true
+                    emit(EngineEvent.Failure("ad stalled: no music transition in server queue"))
+                }
+                return
+            }
+            blockedAdUri = track.metadata.uri
+            adStallReported = false
             // On to the next song (outside this handler: a command waits for the lock it holds).
-            scope.launch { runCatching { command("skip_next") }.onFailure { emit(EngineEvent.Failure("ad not passed: ${it.message}")) } }
+            scope.launch {
+                runCatching { command("skip_next") }.onFailure { err ->
+                    val sm = machine
+                    val nextPair = sm?.states?.firstNotNullOfOrNull { st ->
+                        val tr = sm.tracks.getOrNull(st.track)
+                        if (tr != null && tr.contentType != "AD" && tr.metadata.uri.startsWith("spotify:track:")) st to tr else null
+                    }
+                    if (nextPair != null) {
+                        lock.withLock {
+                            stateIndex = sm.states.indexOfFirst { it.id == nextPair.first.id }
+                            load(nextPair.first, nextPair.second, 0, paused, "remote", previousPosition)
+                        }
+                    } else {
+                        emit(EngineEvent.Failure("ad not passed: ${err.message}"))
+                    }
+                }
+            }
             return
         }
+        blockedAdUri = null
         emit(EngineEvent.TrackLoading(track.metadata.uri, state.id))
         val file = Resolver.chooseFile(track, formatFilter, lowestQuality) ?: throw EngineException.Protocol("no playable file for ${track.metadata.uri}")
         val t0 = env.nowMs()

@@ -14,19 +14,30 @@ class AdBlockTest {
     private val adAudio = "https://adstudio-assets.scdn.co/mp3/d0448345e619692e0b13626ad4994d4b824f7107.mp3"
     private val tracker = "https://www.googletagmanager.com/gtm.js?id=x"
 
-    @Test fun `the blocker acts only when a remote Connect device the app sent the music to is the active player`() {
-        // The phone's own page plays (the account's player, or the listen-sync mirror): off.
-        assertFalse(AdBlock.activeFor(elsewhere = false, activeId = null, chosenId = null, jamMember = false, premium = false))
-        assertFalse(AdBlock.activeFor(elsewhere = false, activeId = "speaker", chosenId = "speaker", jamMember = false, premium = false))
-        // Projected to the speaker picked in the app: on.
+    @Test fun `the blocker acts on local playback and on a chosen Connect device`() {
+        assertTrue(AdBlock.activeFor(elsewhere = false, activeId = null, chosenId = null, jamMember = false, premium = false))
+        assertTrue(AdBlock.activeFor(elsewhere = false, activeId = "speaker", chosenId = "speaker", jamMember = false, premium = false))
+        assertFalse(AdBlock.activeFor(elsewhere = false, activeId = null, chosenId = null, jamMember = false, premium = false, mirroring = true))
+        assertFalse(AdBlock.activeFor(elsewhere = false, activeId = null, chosenId = null, jamMember = false, premium = true))
+        assertFalse(AdBlock.activeFor(elsewhere = false, activeId = null, chosenId = null, jamMember = true, premium = false))
         assertTrue(AdBlock.activeFor(elsewhere = true, activeId = "speaker", chosenId = "speaker", jamMember = false, premium = false))
-        // Another device took playback by itself (the desktop app), or none was picked here: off.
         assertFalse(AdBlock.activeFor(elsewhere = true, activeId = "desktop", chosenId = "speaker", jamMember = false, premium = false))
         assertFalse(AdBlock.activeFor(elsewhere = true, activeId = "desktop", chosenId = null, jamMember = false, premium = false))
-        // A Jam's device, a Jam joined as a member, a Premium account: off.
         assertFalse(AdBlock.activeFor(elsewhere = true, activeId = "social-connect-x", chosenId = "social-connect-x", jamMember = false, premium = false))
         assertFalse(AdBlock.activeFor(elsewhere = true, activeId = "speaker", chosenId = "speaker", jamMember = true, premium = false))
         assertFalse(AdBlock.activeFor(elsewhere = true, activeId = "speaker", chosenId = "speaker", jamMember = false, premium = true))
+    }
+
+    @Test fun `withoutAds rewrites advance to skip_next when advance points to an ad`() {
+        val body = """{"state_machine":{"tracks":[{"content_type":"TRACK","metadata":{"uri":"spotify:track:1"}},{"content_type":"AD","metadata":{"uri":"spotify:ad:1"}},{"content_type":"TRACK","metadata":{"uri":"spotify:track:2"}}],"states":[{"track":0,"transitions":{"advance":{"state_index":1},"skip_next":{"state_index":2}}},{"track":1,"transitions":{}},{"track":2,"transitions":{}}]}}"""
+        assertEquals(body, AdBlock.withoutAds(body, blocking = false))
+        val rewritten = AdBlock.withoutAds(body, blocking = true)
+        assertTrue("\"advance\":{\"state_index\":2}" in rewritten, rewritten)
+    }
+
+    @Test fun `withoutAds leaves state machine unchanged when skip_next also points to an ad`() {
+        val body = """{"state_machine":{"tracks":[{"content_type":"TRACK","metadata":{"uri":"spotify:track:1"}},{"content_type":"AD","metadata":{"uri":"spotify:ad:1"}}],"states":[{"track":0,"transitions":{"advance":{"state_index":1},"skip_next":{"state_index":1}}},{"track":1,"transitions":{}}]}}"""
+        assertEquals(body, AdBlock.withoutAds(body, blocking = true))
     }
 
     @Test fun `while the blocker is off the page is refused nothing, ads and trackers alike`() {

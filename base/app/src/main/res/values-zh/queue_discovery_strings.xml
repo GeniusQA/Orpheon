@@ -1,0 +1,20 @@
+<resources>
+    <string name="rec_provider_spotify">Spotify</string>
+    <string name="rec_provider_ytmusic">YT Music</string>
+    <string name="rec_provider_both">两者都要</string>
+    <string name="queue_mood_similar">相似</string>
+    <string name="queue_mood_familiar">熟悉</string>
+    <string name="queue_mood_chill">放松</string>
+    <string name="queue_mood_workout">运动</string>
+    <string name="queue_mood_focus">专注</string>
+    <string name="queue_mood_party">派对</string>
+    <string name="queue_mood_late_night">深夜</string>
+    <string name="queue_mood_discover">探索</string>
+    <string name="queue_mood_added">已添加 %1$d 首%2$s歌曲到队列</string>
+    <string name="queue_mood_empty">没有找到这个情绪的新歌曲</string>
+    <string name="queue_surprise_me">随机来点</string>
+    <string name="queue_surprise_started">随机混合：%1$s</string>
+    <string name="save_queue_include_current">包含当前播放歌曲</string>
+    <string name="save_queue_include_upcoming">包含后续上下文歌曲</string>
+    <string name="save_queue_track_count">将保存 %1$d 首歌曲</string>
+</resources>

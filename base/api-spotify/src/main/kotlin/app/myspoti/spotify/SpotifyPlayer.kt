@@ -91,6 +91,8 @@ class SpotifyPlayer(private val bridge: Bridge, private val scope: CoroutineScop
      */
     val stalled: StateFlow<Boolean> = _stalled
     @Volatile private var adSince = 0L
+    @Volatile private var adPreSkippedUri: String? = null
+    @Volatile private var adReloadedAt = 0L
     /** When the page last reported the ad break (its end can be lost on the way, see [watchStalls]). */
     @Volatile private var adStateAt = 0L
     /** A pause asked through [pause]; it holds until playback is asked for again, never expires. */
@@ -821,19 +823,37 @@ class SpotifyPlayer(private val bridge: Bridge, private val scope: CoroutineScop
             val s = _state.value
             preloadNextSong(s, media)
             tickCrossfade(s, media, now)
+            if (!remoteActive && !mirroring && !_adPlaying.value && app.myspoti.spotify.bridge.AdBlock.active.value &&
+                s != null && !s.isPaused) {
+                val due = app.myspoti.spotify.bridge.AdSchedule.due.value
+                val songUri = s.item?.uri
+                val dur = s.item?.durationMs ?: 0L
+                val nextUri = due?.nextUri
+                val remaining = dur - s.positionMs
+                if (due != null && dur > 0L && songUri != null && due.songUri == songUri && !nextUri.isNullOrBlank() &&
+                    remaining in 1L..1_500L && adPreSkippedUri != songUri) {
+                    adPreSkippedUri = songUri
+                    bridge.logger?.invoke("adblock: skipping due ad after $songUri -> $nextUri")
+                    val ctx = s.contextUri
+                    scope.launch {
+                        runCatching {
+                            if (ctx != null) play(ctx, trackUri = nextUri) else play(nextUri)
+                        }.onFailure { bridge.logger?.invoke("adblock: pre-skip failed: ${it.message}") }
+                    }
+                }
+            }
             if (localMuted && s?.item?.uri != quietUri) { quietUri = s?.item?.uri; applyQuiet() }
             if (tick % VOLUME_CHECK_TICKS == 0) guardVolume(s, media)
             if (!_adPlaying.value) remoteAdLogged = false
             if (_adPlaying.value) {
-                // The screens show the break (or the song before it, waiting), not a stall. The ad
-                // plays to its end; nothing is muted or skipped from here.
                 notStalled()
                 if (remoteActive) {
-                    // On another device of the account (Connect, Cast): the ad blocker for Connect
-                    // devices looks after it (AdBlock); a reload or a play of the next song from here
-                    // was refused by that device, or pulled playback back to the phone.
                     if (!remoteAdLogged) bridge.logger?.invoke("ad on another device: nothing done from here")
                     remoteAdLogged = true
+                } else if (!mirroring && app.myspoti.spotify.bridge.AdBlock.active.value && now - adSince > 2_500L && adReloadedAt != adSince) {
+                    adReloadedAt = adSince
+                    bridge.logger?.invoke("adblock: local ad stuck for ${(now - adSince) / 1000}s, reloading to resume next track")
+                    reloadAndPlayOn(lastTrackState, next = true)
                 } else if (now - adStateAt > AD_STATE_RECHECK_MS) {
                     // The page's state push that ends the break can be lost on the way (the events
                     // buffer drops the oldest under a stalled main thread), leaving the screen on
@@ -1232,6 +1252,13 @@ class SpotifyPlayer(private val bridge: Bridge, private val scope: CoroutineScop
         playNow(list ?: song.uri, trackUri = song.uri.takeIf { list != null }, order = lastOrder?.takeIf { list != null && it.first == list }?.second, origin = origin)
     }
 
+    @Volatile private var appUserActedAt = Long.MIN_VALUE / 2
+
+    fun noteUserAction() {
+        appUserActedAt = clock()
+        skipChain.reset()
+    }
+
     private val skipChain = TrackChanges.Chain()
     private val commandsExplained = TrackChanges.Commands()
     private val _skipChained = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
@@ -1257,7 +1284,8 @@ class SpotifyPlayer(private val bridge: Bridge, private val scope: CoroutineScop
         // The song a play asked for; a skip (newer than the last play) names none.
         val target = play?.takeIf { it.third >= userMoveAt }?.second
         val used = commandsExplained.used(commandAt, to.uri, target)
-        val cause = TrackChanges.cause(played, from.durationMs, now - commandAt, adJustEnded, crossfadeArmed, commandUsed = used)
+        val measured = TrackChanges.cause(played, from.durationMs, now - commandAt, adJustEnded, crossfadeArmed, commandUsed = used)
+        val cause = if (measured == TrackChanges.Cause.OWN && now - appUserActedAt in 0..TrackChanges.COMMAND_MS) TrackChanges.Cause.COMMAND else measured
         val list = if (old.contextUri == s.contextUri) "in ${s.contextUri}" else "${old.contextUri} -> ${s.contextUri}"
         bridge.logger?.invoke("track change: ${from.name} -> ${to.name} (${cause.text}, left at ${TrackChanges.clock(played)} of ${TrackChanges.clock(from.durationMs)}, $list${if (playbackHeld()) ", playback held" else ""}${if (mirrored) ", mirroring" else ""})")
         // The page only mirrors a song of an extension (heard from the phone's own player): pausing

@@ -14,21 +14,18 @@ import androidx.compose.ui.platform.LocalContext
 
 /** Where this phone's sound goes: its speaker, a Bluetooth device or wired headphones. */
 data class AudioRoute(val kind: Kind, val name: String) {
-    enum class Kind { SPEAKER, BLUETOOTH, WIRED }
+    enum class Kind { SPEAKER, BLUETOOTH, WIRED, USB_DAC }
 
     companion object {
-        /**
-         * The output media plays on now. Each name is read on its own: without
-         * BLUETOOTH_CONNECT the product name throws, and the route must still be known
-         * (the mini player then says "Bluetooth" instead of showing nothing).
-         */
         fun current(context: Context): AudioRoute = runCatching {
             val am = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             val outs = am.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
             fun nameOf(device: AudioDeviceInfo) = runCatching { device.productName?.toString().orEmpty() }.getOrDefault("")
+            outs.firstOrNull { it.type == AudioDeviceInfo.TYPE_USB_DEVICE || it.type == AudioDeviceInfo.TYPE_USB_HEADSET || it.type == AudioDeviceInfo.TYPE_USB_ACCESSORY }
+                ?.let { return@runCatching AudioRoute(Kind.USB_DAC, nameOf(it)) }
             outs.firstOrNull { it.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || it.type == AudioDeviceInfo.TYPE_BLE_HEADSET || it.type == AudioDeviceInfo.TYPE_BLE_SPEAKER }
                 ?.let { return@runCatching AudioRoute(Kind.BLUETOOTH, nameOf(it)) }
-            outs.firstOrNull { it.type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES || it.type == AudioDeviceInfo.TYPE_WIRED_HEADSET || it.type == AudioDeviceInfo.TYPE_USB_HEADSET }
+            outs.firstOrNull { it.type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES || it.type == AudioDeviceInfo.TYPE_WIRED_HEADSET }
                 ?.let { return@runCatching AudioRoute(Kind.WIRED, nameOf(it)) }
             AudioRoute(Kind.SPEAKER, "")
         }.getOrDefault(AudioRoute(Kind.SPEAKER, ""))

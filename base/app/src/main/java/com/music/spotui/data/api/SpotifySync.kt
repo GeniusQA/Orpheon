@@ -150,9 +150,13 @@ object SpotifySync {
      * row that cannot be opened yet, and becomes the real playlist when Spotify has answered;
      * a refused creation takes the row away again.
      */
-    fun createPlaylistWithTrack(context: Context, name: String, trackId: String, folderUri: String? = null, onDone: (Boolean) -> Unit = {}) {
+    fun createPlaylistWithTrack(context: Context, name: String, trackId: String, folderUri: String? = null, onDone: (Boolean) -> Unit = {}) =
+        createPlaylistWithTracks(context, name, if (trackId.isNotBlank()) listOf(trackId) else emptyList(), folderUri, onDone)
+
+    fun createPlaylistWithTracks(context: Context, name: String, trackIds: List<String>, folderUri: String? = null, onDone: (Boolean) -> Unit = {}) {
         val title = name.trim()
         if (title.isBlank()) { onDone(false); return }
+        val cleanIds = trackIds.map { it.trim() }.filter { it.isNotBlank() }.distinct()
         val app = context.applicationContext
         val placeholderId = LibraryEdits.PENDING_PREFIX + pendingIds.incrementAndGet()
         val edit = LibraryEdits.Add(folderUri, LibraryEntry(
@@ -167,11 +171,12 @@ object SpotifySync {
             LibraryEdits.resolve(edit, edit.entry.copy(spotifyId = uri.substringAfterLast(':'), uri = uri))
             Api.HomeCache.libraryRoot = null
             folderUri?.let { Api.HomeCache.folders.remove(it) }
-            if (trackId.isNotBlank()) {
+            if (cleanIds.isNotEmpty()) {
                 // The playlist exists now: a refused track must not take its row away again.
-                trackAdded = runCatching { api.playlists.addTracks(uri, listOf("spotify:track:$trackId")) }
-                    .onFailure { Log.w(TAG, "add $trackId to new playlist '$title' failed: ${it.message}") }.isSuccess
-                if (trackAdded) membershipCache[uri.substringAfterLast(':')] = ConcurrentHashMap.newKeySet<String>().apply { add(trackId) }
+                val uris = cleanIds.map { "spotify:track:$it" }
+                trackAdded = runCatching { api.playlists.addTracks(uri, uris) }
+                    .onFailure { Log.w(TAG, "add ${cleanIds.size} tracks to new playlist '$title' failed: ${it.message}") }.isSuccess
+                if (trackAdded) membershipCache[uri.substringAfterLast(':')] = ConcurrentHashMap.newKeySet<String>().apply { addAll(cleanIds) }
             }
         }, onDone = { ok -> onDone(ok && trackAdded) })
     }

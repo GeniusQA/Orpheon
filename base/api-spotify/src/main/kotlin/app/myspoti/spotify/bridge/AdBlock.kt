@@ -4,6 +4,12 @@ import app.myspoti.spotify.AccountPlan
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
 
 /**
  * The ad blocker, for Spotify Connect devices only. It acts while the app sends the music to
@@ -27,9 +33,12 @@ object AdBlock {
     fun activeFor(
         elsewhere: Boolean, activeId: String?, chosenId: String?, jamMember: Boolean,
         premium: Boolean = AccountPlan.isPremium,
+        mirroring: Boolean = false,
     ): Boolean =
-        !premium && elsewhere && activeId != null && activeId == chosenId &&
-            !activeId.startsWith("social-connect") && !jamMember
+        !premium && !jamMember && (
+            (!elsewhere && !mirroring) ||
+                (elsewhere && activeId != null && activeId == chosenId && !activeId.startsWith("social-connect"))
+        )
 
     private val _active = MutableStateFlow(false)
 
@@ -79,6 +88,40 @@ object AdBlock {
 
     /** Whether the page is refused [url]: an ad or tracker host of the list, only while the blocker is [active]. */
     fun isBlocked(url: String): Boolean = isBlocked(url, _active.value)
+
+    fun withoutAds(body: String): String = withoutAds(body, _active.value && !AccountPlan.isPremium)
+
+    internal fun withoutAds(body: String, blocking: Boolean): String {
+        if (!blocking || "\"state_machine\"" !in body) return body
+        return runCatching {
+            val root = Json.parseToJsonElement(body).jsonObject
+            val machine = root["state_machine"] as? JsonObject ?: return body
+            val tracks = machine["tracks"] as? JsonArray ?: return body
+            val states = machine["states"] as? JsonArray ?: return body
+            fun index(o: JsonObject?, key: String) = (o?.get(key) as? JsonPrimitive)?.contentOrNull?.toIntOrNull()
+            fun stateAt(i: Int) = states.getOrNull(i) as? JsonObject
+            fun trackOf(i: Int) = index(stateAt(i), "track")?.let { tracks.getOrNull(it) as? JsonObject }
+            fun isAd(i: Int) = AdSchedule.isAdTrack(trackOf(i))
+            var changed = false
+            val newStates = states.mapIndexed { idx, el ->
+                val st = el as? JsonObject ?: return@mapIndexed el
+                if (isAd(idx)) return@mapIndexed el
+                val transitions = st["transitions"] as? JsonObject ?: return@mapIndexed el
+                val advance = transitions["advance"] as? JsonObject ?: return@mapIndexed el
+                val advIdx = index(advance, "state_index") ?: return@mapIndexed el
+                if (!isAd(advIdx)) return@mapIndexed el
+                val skipNext = transitions["skip_next"] as? JsonObject ?: return@mapIndexed el
+                val skipIdx = index(skipNext, "state_index") ?: return@mapIndexed el
+                if (isAd(skipIdx)) return@mapIndexed el
+                changed = true
+                val newTransitions = LinkedHashMap(transitions).apply { put("advance", skipNext) }
+                JsonObject(LinkedHashMap(st).apply { put("transitions", JsonObject(newTransitions)) })
+            }
+            if (!changed) return body
+            val newMachine = JsonObject(LinkedHashMap(machine).apply { put("states", JsonArray(newStates)) })
+            JsonObject(LinkedHashMap(root).apply { put("state_machine", newMachine) }).toString()
+        }.getOrDefault(body)
+    }
 
     internal fun isBlocked(url: String, blocking: Boolean): Boolean {
         if (!blocking) return false

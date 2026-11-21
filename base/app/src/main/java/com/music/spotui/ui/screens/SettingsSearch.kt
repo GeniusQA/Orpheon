@@ -75,6 +75,7 @@ internal object SettingsSearch {
         SettingsEntry(R.string.restart_player_title, R.string.restart_player_detail, "App"),
         SettingsEntry(R.string.diagnostic_export_title, R.string.diagnostic_export_detail, "App"),
         SettingsEntry(R.string.settings_section_playback, 0, "Playback"),
+        SettingsEntry(R.string.output_profiles_title, R.string.output_profiles_detail, "Playback"),
         SettingsEntry(R.string.settings_section_downloads, 0, "Downloads"),
         SettingsEntry(R.string.settings_section_lyrics, 0, "Lyrics"),
         SettingsEntry(R.string.settings_section_display, 0, "Display"),

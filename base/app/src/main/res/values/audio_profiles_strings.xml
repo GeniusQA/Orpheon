@@ -1,0 +1,18 @@
+<resources>
+    <string name="output_profiles_title">Output audio profiles</string>
+    <string name="output_profiles_detail">Automatically switch streaming quality when USB DAC, wired headphones, Bluetooth, or speaker connects (for the active network)</string>
+    <string name="output_profile_default">Default</string>
+    <string name="nerd_audio_api">Audio API</string>
+    <string name="nerd_audio_api_direct">AudioTrack · Direct / Hi-Res capable</string>
+    <string name="nerd_audio_api_mixer">AudioTrack · Android mixer</string>
+    <string name="nerd_resampling">Resampling</string>
+    <string name="nerd_resampling_no">None (native rate)</string>
+    <string name="nerd_resampling_yes">Resampled (%1$s → %2$s)</string>
+    <string name="nerd_bit_perfect">Bit-perfect</string>
+    <string name="nerd_bit_perfect_direct">Active (Direct USB)</string>
+    <string name="nerd_bit_perfect_dsp">Bypassed (EQ / DSP active)</string>
+    <string name="nerd_bit_perfect_mixer">No (Android mixer)</string>
+    <string name="nerd_audio_profile">Audio profile</string>
+    <string name="nerd_profile_wifi">Wi-Fi</string>
+    <string name="nerd_profile_cellular">Mobile data</string>
+</resources>

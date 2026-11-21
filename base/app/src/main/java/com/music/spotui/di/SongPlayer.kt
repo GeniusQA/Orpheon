@@ -770,9 +770,13 @@ object SongPlayer {
         // to after the previous one belongs to the show, not to that recommendation autoplay —
         // pausing it there is how a podcast "stopped by itself" (B11).
         if (item != null && item.provider == "autoplay" && uri.startsWith(SPOTIFY_TRACK_PREFIX) &&
-            uri != autoplayHandledUri && !com.music.spotui.data.preferences.AutoplayPref.on) {
-            autoplayHandledUri = uri
-            if (!s.isPaused) pauseSilently()
+            !com.music.spotui.data.preferences.AutoplayPref.on) {
+            if (!s.isPaused && uri != autoplayHandledUri) {
+                autoplayHandledUri = uri
+                pauseSilently()
+            }
+        } else if (item?.provider != "autoplay") {
+            autoplayHandledUri = ""
         }
         if (item != null && trackChanged && playing && !adState.value && uri.startsWith(SPOTIFY_TRACK_PREFIX)) skipHidden(id, uri)
         currentContextUri = s.contextUri.orEmpty()
@@ -1430,7 +1434,10 @@ object SongPlayer {
 
     /** When the user last skipped, went back, paused, played or picked a song (elapsedRealtime). */
     @Volatile private var userActedAt = 0L
-    private fun userActed() { userActedAt = android.os.SystemClock.elapsedRealtime() }
+    private fun userActed() {
+        userActedAt = android.os.SystemClock.elapsedRealtime()
+        if (MyspotiRuntime.isStarted) runCatching { MyspotiRuntime.spotify.player.noteUserAction() }
+    }
 
     private var fallbackWatch: kotlinx.coroutines.Job? = null
     /** Songs skipped in a row because neither the extensions nor Spotify played them. */

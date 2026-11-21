@@ -10,7 +10,7 @@ import com.music.spotui.ui.theme.AppMuted
 import kotlinx.coroutines.launch
 import com.music.spotui.ui.components.SearchClearButton
 import com.music.spotui.ui.components.pressable
-import com.music.spotui.ui.components.launchVoiceSearch
+import com.music.spotui.ui.components.rememberVoiceSearch
 import androidx.compose.ui.res.stringResource
 
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -846,7 +846,7 @@ fun SearchStickyBar(
     // The field is always attached to a requester, so the clear button can put the cursor back in it.
     val ownFocus = remember { androidx.compose.ui.focus.FocusRequester() }
     val fieldFocus = focusRequester ?: ownFocus
-    val context = LocalContext.current
+        val voiceSearch = rememberVoiceSearch(onTextChange)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -915,7 +915,7 @@ fun SearchStickyBar(
                 .size(55.dp)
                 .clip(CircleShape)
                 .background(tone(0xFF2A2A2A))
-                .pressable(0.9f) { launchVoiceSearch(context) },
+                .pressable(0.9f) { voiceSearch() },
         ) {
             Icon(
                 imageVector = Icons.Outlined.Mic,

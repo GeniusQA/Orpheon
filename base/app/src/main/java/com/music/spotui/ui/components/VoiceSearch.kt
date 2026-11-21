@@ -1,19 +1,32 @@
 package com.music.spotui.ui.components
 
-import android.content.Context
+import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.speech.RecognizerIntent
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 import app.myspoti.engine.R
+import java.util.Locale
 
-/**
- * Opens the device's own voice search for music: the exact intent the Google app itself answers
- * ("Search with your voice"), used as-is rather than building a speech-recognition UI of our own.
- * Shared by the Classic and Immersive Search screens' mic button. A no-op but a toast if nothing
- * on the device can handle it (no Google app installed).
- */
-fun launchVoiceSearch(context: Context) {
-    val intent = Intent("com.google.android.googlequicksearchbox.MUSIC_SEARCH")
-        .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    runCatching { context.startActivity(intent) }
-        .onFailure { Toast.makeText(context, context.getString(R.string.voice_search_unavailable), Toast.LENGTH_SHORT).show() }
+@Composable
+fun rememberVoiceSearch(onText: (String) -> Unit): () -> Unit {
+    val context = LocalContext.current
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+                ?.firstOrNull { it.isNotBlank() }?.trim()?.let(onText)
+        }
+    }
+    return {
+        val request = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault().toLanguageTag())
+        try { launcher.launch(request) } catch (_: ActivityNotFoundException) {
+            Toast.makeText(context, R.string.voice_recognition_unavailable, Toast.LENGTH_SHORT).show()
+        }
+    }
 }

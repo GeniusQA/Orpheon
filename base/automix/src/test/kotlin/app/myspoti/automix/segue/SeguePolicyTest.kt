@@ -117,6 +117,17 @@ class SeguePolicyTest {
         assertEquals(t.compact.fadeMinUs, p.span.lengthUs)
     }
 
+    @Test fun unarmedFadeCanKeepItsDeckAndOriginalCue() {
+        val fade = SeguePolicy.timing(decide(song("a", grid = false, bars = false), song("b", grid = false, bars = false)))!!
+        val fallback = fade.volumeFallback()!!
+        assertNull(fallback.segue)
+        assertEquals(fade.exitA, fallback.exitA, 0.0)
+        assertEquals(fade.entryB, fallback.entryB, 0.0)
+        assertEquals(fade.endA, fallback.endA, 0.0)
+        assertNull(fallback.volumeFallback())
+        assertNull(SeguePolicy.timing(decide(song("a"), song("b")))!!.volumeFallback())
+    }
+
     @Test fun albumContinuityIsLeftToPlayNatively() {
         val joined = decide(song("a"), song("b"), sameAlbum = true)
         assertEquals(SegueLevel.NORMAL, joined.level)

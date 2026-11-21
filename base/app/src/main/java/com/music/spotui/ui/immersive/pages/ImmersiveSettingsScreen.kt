@@ -342,11 +342,50 @@ private fun PlaybackPage(navController: NavController, open: (SettingsPage) -> U
     val session by com.music.spotui.extensions.Extensions.sessionSource.collectAsStateWithLifecycle()
     val ext = remember(registry, session) { com.music.spotui.extensions.Extensions.sectionPlacement(app.myspoti.extensions.SettingSection.PLAYBACK) }
     val extHeader = ext?.let { stringResource(R.string.ext_section_settings, it.name) }
+    val premium by app.myspoti.spotify.AccountPlan.premium.collectAsState()
+    val cellular = com.music.spotui.data.DataSaver.metered
+    var profileTick by remember { mutableStateOf(0) }
+    val outputTiers = remember(premium) {
+        buildList<StreamingQuality?> {
+            add(null)
+            add(StreamingQuality.LOW)
+            add(StreamingQuality.NORMAL)
+            add(StreamingQuality.HIGH)
+            if (premium == true) add(StreamingQuality.VERY_HIGH)
+        }
+    }
     ImmersivePage(title = stringResource(R.string.settings_section_playback), onBack = back) {
         if (ext != null && extHeader != null) extensionSectionGroup(ext, extHeader)
         if (ext?.hidesAppQuality != true) immersiveGroup("quality", footerRes = R.string.quality_streaming_detail) {
             row { ImmersiveGroupRow(stringResource(R.string.quality_streaming_wifi_title), value = stringResource(label(wifi)), chevron = true, onClick = { open(SettingsPage.StreamingWifi) }) }
             row { ImmersiveGroupRow(stringResource(R.string.quality_streaming_cell_title), value = stringResource(label(cell)), chevron = true, onClick = { open(SettingsPage.StreamingCell) }) }
+        }
+        if (ext?.hidesAppQuality != true) {
+            immersiveGroup("output_profiles", headerRes = R.string.output_profiles_title, footerRes = R.string.output_profiles_detail) {
+                listOf(
+                    com.music.spotui.ui.components.AudioRoute.Kind.USB_DAC to R.string.nerd_output_usb,
+                    com.music.spotui.ui.components.AudioRoute.Kind.WIRED to R.string.nerd_output_wired,
+                    com.music.spotui.ui.components.AudioRoute.Kind.BLUETOOTH to R.string.nerd_output_bluetooth,
+                    com.music.spotui.ui.components.AudioRoute.Kind.SPEAKER to R.string.nerd_output_speaker,
+                ).forEach { (kind, titleRes) ->
+                    row {
+                        val current = remember(profileTick, cellular) {
+                            com.music.spotui.data.preferences.getOutputStreamingQuality(ctx, kind, cellular)
+                        }
+                        val valueText = current?.let { stringResource(label(it)) } ?: stringResource(R.string.output_profile_default)
+                        ImmersiveGroupRow(
+                            title = stringResource(titleRes),
+                            value = valueText,
+                            onClick = {
+                                val idx = outputTiers.indexOf(current)
+                                val next = outputTiers[(idx + 1) % outputTiers.size]
+                                com.music.spotui.data.preferences.setOutputStreamingQuality(ctx, kind, next, cellular)
+                                profileTick++
+                            },
+                        )
+                    }
+                }
+            }
         }
         immersiveGroup("playback") {
             row {

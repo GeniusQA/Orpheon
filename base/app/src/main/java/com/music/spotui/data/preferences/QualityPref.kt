@@ -11,6 +11,7 @@ private const val PREF = "settings_prefs"
 private const val KEY_STREAMING = "streaming_quality"
 private const val KEY_CHOSEN = "quality_chosen"
 private const val KEY_STREAMING_CELL = "streaming_quality_cellular"
+private const val KEY_STREAMING_OUTPUT_PREFIX = "streaming_quality_output_"
 private const val KEY_CANVAS_WIFI = "canvas_wifi_only"
 
 /**
@@ -58,12 +59,65 @@ fun setStreamingQuality(c: Context, q: StreamingQuality, cellular: Boolean = fal
     applyStreamingQuality(c)
 }
 
-/** Gives the current network's level to the Web Player (at start and when the network changes); harmless before it is up. */
+fun getOutputStreamingQuality(
+    c: Context,
+    route: com.music.spotui.ui.components.AudioRoute.Kind,
+    cellular: Boolean = false,
+): StreamingQuality? {
+    val net = if (cellular) "cell" else "wifi"
+    val raw = ProfilePrefs.getString(prefs(c), "$KEY_STREAMING_OUTPUT_PREFIX${route.name.lowercase()}_$net", null)
+        ?: return null
+    return StreamingQuality.entries.firstOrNull { it.level == raw }
+}
+
+fun setOutputStreamingQuality(
+    c: Context,
+    route: com.music.spotui.ui.components.AudioRoute.Kind,
+    q: StreamingQuality?,
+    cellular: Boolean = false,
+) {
+    val net = if (cellular) "cell" else "wifi"
+    val key = ProfilePrefs.key("$KEY_STREAMING_OUTPUT_PREFIX${route.name.lowercase()}_$net")
+    prefs(c).edit().apply {
+        if (q == null) remove(key) else putString(key, q.level)
+    }.apply()
+    applyStreamingQuality(c)
+}
+
+fun effectiveStreamingQuality(
+    c: Context,
+    cellular: Boolean = com.music.spotui.data.DataSaver.metered,
+    route: com.music.spotui.ui.components.AudioRoute.Kind = com.music.spotui.ui.components.AudioRoute.current(c).kind,
+): StreamingQuality =
+    getOutputStreamingQuality(c, route, cellular) ?: getStreamingQuality(c, cellular)
+
 fun applyStreamingQuality(c: Context) {
     val runtime = app.myspoti.host.android.MyspotiRuntime
     if (!runtime.isStarted) return
-    val q = getStreamingQuality(c, cellular = com.music.spotui.data.DataSaver.metered)
+    val q = effectiveStreamingQuality(c)
     runtime.scope.launch { runtime.spotify.player.setAudioQuality(q.level) }
+}
+
+object AudioOutputProfileWatcher {
+    @Volatile private var started = false
+
+    fun start(context: Context) {
+        if (started) return
+        started = true
+        val app = context.applicationContext
+        runCatching {
+            val am = app.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+            am.registerAudioDeviceCallback(object : android.media.AudioDeviceCallback() {
+                override fun onAudioDevicesAdded(added: Array<out android.media.AudioDeviceInfo>?) {
+                    applyStreamingQuality(app)
+                }
+
+                override fun onAudioDevicesRemoved(removed: Array<out android.media.AudioDeviceInfo>?) {
+                    applyStreamingQuality(app)
+                }
+            }, null)
+        }
+    }
 }
 
 /** Canvas (the looping videos) only on Wi-Fi: they cost data on every song. */
