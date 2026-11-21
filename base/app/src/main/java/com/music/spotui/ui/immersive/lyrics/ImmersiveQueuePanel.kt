@@ -323,7 +323,7 @@ fun ImmersiveQueuePanel(modifier: Modifier = Modifier, contentPadding: PaddingVa
 
     val context = androidx.compose.ui.platform.LocalContext.current
     val saveableTrackIds = remember(queue.current, queue.queued, queue.nextUp) {
-        (listOfNotNull(queue.current?.song?.spotifyTrackId) + queue.queued.map { it.song.spotifyTrackId } + queue.nextUp.map { it.song.spotifyTrackId })
+        (listOfNotNull(queue.current?.spotifyTrackId) + queue.queued.map { it.song.spotifyTrackId } + queue.nextUp.map { it.song.spotifyTrackId })
             .map { it.trim() }.filter { it.isNotBlank() }.distinct()
     }
     var saveDialogOpen by remember { mutableStateOf(false) }
@@ -333,7 +333,7 @@ fun ImmersiveQueuePanel(modifier: Modifier = Modifier, contentPadding: PaddingVa
     val discoveryScope = androidx.compose.runtime.rememberCoroutineScope()
     if (saveDialogOpen) com.music.spotui.ui.components.SaveQueueDialog(
         initialName = contextName.ifBlank { stringResource(R.string.action_queue_label) },
-        currentId = queue.current?.song?.spotifyTrackId,
+        currentId = queue.current?.spotifyTrackId,
         queuedIds = queue.queued.map { it.song.spotifyTrackId },
         nextUpIds = queue.nextUp.map { it.song.spotifyTrackId },
         onDismiss = { saveDialogOpen = false },

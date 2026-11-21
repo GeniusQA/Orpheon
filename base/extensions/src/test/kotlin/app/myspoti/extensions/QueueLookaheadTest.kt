@@ -1,7 +1,7 @@
 package app.myspoti.extensions
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 
 class QueueLookaheadTest {
     @Test fun queueEventSeesFiveUpcomingTracks() {

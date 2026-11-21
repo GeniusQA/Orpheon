@@ -73,7 +73,7 @@ fun QueueScreen(navController: NavController) {
     val upcoming = remember(q.nextUp, term) { q.nextUp.filter(::matches) }
     val context = androidx.compose.ui.platform.LocalContext.current
     val saveableTrackIds = remember(q.current, q.queued, q.nextUp) {
-        (listOfNotNull(q.current?.song?.spotifyTrackId) + q.queued.map { it.song.spotifyTrackId } + q.nextUp.map { it.song.spotifyTrackId })
+        (listOfNotNull(q.current?.spotifyTrackId) + q.queued.map { it.song.spotifyTrackId } + q.nextUp.map { it.song.spotifyTrackId })
             .map { it.trim() }.filter { it.isNotBlank() }.distinct()
     }
     var saveDialogOpen by remember { mutableStateOf(false) }
@@ -83,7 +83,7 @@ fun QueueScreen(navController: NavController) {
     val discoveryScope = androidx.compose.runtime.rememberCoroutineScope()
     if (saveDialogOpen) com.music.spotui.ui.components.SaveQueueDialog(
         initialName = SongPlayer.nowPlaying.value.contextName.ifBlank { stringResource(R.string.action_queue_label) },
-        currentId = q.current?.song?.spotifyTrackId,
+        currentId = q.current?.spotifyTrackId,
         queuedIds = q.queued.map { it.song.spotifyTrackId },
         nextUpIds = q.nextUp.map { it.song.spotifyTrackId },
         onDismiss = { saveDialogOpen = false },

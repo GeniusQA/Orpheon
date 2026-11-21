@@ -1323,12 +1323,12 @@ object Extensions {
                 delivered.keys.retainAll(listeners.toSet())
                 if (listeners.isEmpty() || SongPlayer.routing) continue
                 val q = SongPlayer.engineQueue.value
-                val next = app.myspoti.extensions.QueueLookahead.next(q.queued + q.nextUp).map { item ->
+                val next = app.myspoti.extensions.QueueLookahead.next<SongPlayer.QueueItem>(q.queued + q.nextUp).map { item ->
                     val s = item.song
                     val info = trackInfo(s.spotifyTrackId, s.title, s.singer, s.album, s.durationMs.toLong(), s.coverUri)
-                    Json.parseToJsonElement(info.copy(uri = item.uri).toJson())
+                    kotlinx.serialization.json.Json.parseToJsonElement(info.copy(uri = item.uri).toJson())
                 }
-                val json = JsonObject(mapOf("next" to JsonArray(next))).toString()
+                val json = JsonObject(mapOf("next" to kotlinx.serialization.json.JsonArray(next))).toString()
                 for (rt in listeners) {
                     if (delivered[rt] == json) continue
                     delivered[rt] = json
